@@ -16,7 +16,7 @@ module mod_odp_triangle
     real(c_double), allocatable :: triangle(:, :), triangle_fit(:, :)
     real(c_double), allocatable :: resids(:, :)
     real(c_double), allocatable :: betas(:), betas_boot(:)
-    real(c_double) :: disp
+    real(c_double) :: disp, disp_boot
     logical(c_bool), allocatable :: mask(:, :)
     logical :: first_call = .true.
 
@@ -25,7 +25,36 @@ module mod_odp_triangle
     final :: destructor
   end type t_odp_triangle
 
+  type t_glm_res
+    real(c_double), allocatable :: betas(:)
+    real(c_double) :: disp
+
+  contains
+    procedure, public :: init => init_glm_res
+  end type t_glm_res
+
 contains
+  subroutine print_array(X)
+    real(c_double), intent(in) :: X(:, :)
+
+    integer :: i, j, n, m
+
+    n = size(X, 1)
+    m = size(X, 2)
+    do i = 1, n
+      do j = 1, m
+        write (*, "(es11.3)", advance="no") X(i, j)
+      end do
+      print*
+    end do
+  end subroutine print_array
+
+  subroutine init_glm_res(this, n_dev)
+    integer(c_int) :: n_dev
+    class(t_glm_res) :: this
+
+    allocate (this%betas(2 * n_dev - 1), source=0._c_double)
+  end subroutine init_glm_res
 
   subroutine odp_init_triangle(this, triangle, mask)
     class(t_odp_triangle) :: this
@@ -40,15 +69,15 @@ contains
     this%n_fit = (this%n_dev**2 + this%n_dev) / 2
 
     if (this%first_call) then
-      allocate (this%triangle_fit(this%n_dev, this%n_dev))
+      allocate (this%triangle_fit(this%n_dev, this%n_dev), source=0._c_double)
 
       if (present(mask)) then
         this%mask = mask
         this%n_obs = count(this%mask)
         this%n_pred = this%n_dev**2 - this%n_obs
       else
-      
-      this%n_pred = this%n_dev**2 - this%n_fit
+        this%n_obs = this%n_fit
+        this%n_pred = this%n_dev**2 - this%n_obs
         allocate (this%mask(this%n_dev, this%n_dev), source=.true._c_bool)
         do j = 1, this%n_dev
           do i = this%n_dev + 2 - j, this%n_dev
@@ -64,16 +93,17 @@ contains
     end if
   end subroutine odp_init_triangle
 
-  function fit_glm_helper(this, triangle, use_mask, status) result(betas)
+  function fit_glm_helper(this, triangle, use_mask, fit, status) result(res)
     class(t_odp_triangle) :: this
     real(c_double), intent(in) :: triangle(:, :)
-    logical, intent(in) :: use_mask
+    logical, intent(in) :: use_mask, fit
     integer(c_int), intent(out) :: status
+    type(t_glm_res) :: res
 
     real(c_double), allocatable :: X(:, :), y(:)
-    real(c_double), allocatable :: y_fit(:), X_fit(:, :), y_model(:)
+    real(c_double), allocatable :: y_fit(:), X_fit(:, :), y_reduced(:)
     real(c_double), allocatable :: rhs(:), lhs(:, :), mu(:)
-    real(c_double), allocatable :: W(:, :), z(:), eta(:), bbetas_old(:), betas(:)
+    real(c_double), allocatable :: W(:, :), z(:), eta(:), betas_old(:), betas(:)
 
     integer(c_int) :: i, j, k, l
     real(c_double) :: diff, eps
@@ -83,6 +113,8 @@ contains
     real(c_double), allocatable :: work(:, :)
     integer(c_int), parameter :: max_iter = 1e3
     integer(c_int) :: n_iter
+
+    call res%init(this%n_dev)
 
     allocate (mask_loc(this%n_dev, this%n_dev), source=.true._c_bool)
     if (use_mask) then
@@ -99,21 +131,21 @@ contains
     this%n_obs = this%n_fit
     if (use_mask) this%n_obs = count(this%mask)
 
-    allocate (X(this%n_obs, this%n_cov))
-    allocate (y(this%n_obs))
-    allocate (y_model(this%n_obs))
-    allocate (W(this%n_obs, this%n_obs))
-    allocate (z(this%n_obs))
-    allocate (eta(this%n_obs))
-    allocate (mu(this%n_obs))
-    allocate (X_fit(this%n_fit, this%n_cov))
-    allocate (y_fit(this%n_fit))
+    allocate (X(this%n_obs, this%n_cov), source=0._c_double)
+    allocate (y(this%n_obs), source=0._c_double)
+    allocate (y_reduced(this%n_obs), source=0._c_double)
+    allocate (W(this%n_obs, this%n_obs), source=0._c_double)
+    allocate (z(this%n_obs), source=0._c_double)
+    allocate (eta(this%n_obs), source=0._c_double)
+    allocate (mu(this%n_obs), source=0._c_double)
+    allocate (X_fit(this%n_fit, this%n_cov), source=0._c_double)
+    allocate (y_fit(this%n_fit), source=0._c_double)
 
     ! Allocate LAPACK helper variables.
-    allocate (rhs(this%n_cov))
-    allocate (lhs(this%n_cov, this%n_cov))
-    allocate (betas(this%n_cov))
-    allocate (bbetas_old(this%n_cov))
+    allocate (rhs(this%n_cov), source=0._c_double)
+    allocate (lhs(this%n_cov, this%n_cov), source=0._c_double)
+    allocate (betas(this%n_cov), source=0._c_double)
+    allocate (betas_old(this%n_cov), source=0._c_double)
 
     lwork = max(1, this%n_cov * this%n_obs + max(this%n_cov * this%n_obs, 1))
     allocate (work(lwork, lwork), source=0._c_double)
@@ -149,11 +181,11 @@ contains
     betas = 0
     info = 0
     diff = 1E6
-    eps = 1E-5
+    eps = 1E-10
     n_iter = 0
     status = SUCCESS
     do while (diff > eps .and. n_iter < max_iter)
-      bbetas_old = betas
+      betas_old = betas
 
       W = 0
       do i = 1, this%n_obs
@@ -172,7 +204,7 @@ contains
       call dgels('N', this%n_obs, this%n_cov, 1, lhs, this%n_obs, rhs, this%n_obs, work, lwork, info)
 
       betas = rhs(1:this%n_cov)
-      diff = norm2(betas - bbetas_old)
+      diff = norm2(betas - betas_old)
 
       eta = matmul(X, betas)
       mu = exp(eta)
@@ -195,32 +227,26 @@ contains
     end if
 
     y_fit = exp(matmul(X_fit, betas))
-    y_model = exp(matmul(X, betas))
+    y_reduced = exp(matmul(X, betas))
 
-    this%disp = sum((y - y_model)**2 / y_model) / (this%n_obs - this%n_cov)
+    res%disp = sum((y - y_reduced)**2 / y_reduced) / (this%n_obs - this%n_cov)
+    res%betas = betas
 
-    k = 1
-    do i = 1, this%n_dev
-      do j = 1, this%n_dev + 1 - i
-        this%triangle_fit(i, j) = y_fit(k)
-        k = k + 1
+    if (fit) then
+      k = 1
+      do i = 1, this%n_dev
+        do j = 1, this%n_dev + 1 - i
+          this%triangle_fit(i, j) = y_fit(k)
+          k = k + 1
+        end do
       end do
-    end do
 
-    do i = 1, this%n_dev
-      do j = 1, this%n_dev + 1 - i
-        this%resids(i, j) = (triangle(i, j) - this%triangle_fit(i, j)) / sqrt(this%triangle_fit(i, j))
+      do i = 1, this%n_dev
+        do j = 1, this%n_dev + 1 - i
+          this%resids(i, j) = (triangle(i, j) - this%triangle_fit(i, j)) / sqrt(this%triangle_fit(i, j))
+        end do
       end do
-    end do
-
-    deallocate (y)
-    deallocate (y_model)
-    deallocate (W)
-    deallocate (z)
-    deallocate (eta)
-    deallocate (mu)
-    deallocate (X_fit)
-    deallocate (y_fit)
+    end if
   end function fit_glm_helper
 
   subroutine fit_glm(this, use_mask, status)
@@ -228,7 +254,11 @@ contains
     logical, intent(in) :: use_mask
     integer, intent(out) :: status
 
-    this%betas = this%fit_glm_helper(this%triangle, use_mask, status)
+    type(t_glm_res) :: res
+
+    res = this%fit_glm_helper(this%triangle, use_mask, .true., status)
+    this%betas = res%betas
+    this%disp = res%disp
   end subroutine fit_glm
 
   subroutine fit_glm_boot(this, triangle_boot, use_mask, status)
@@ -237,7 +267,11 @@ contains
     logical, intent(in) :: use_mask
     integer, intent(out) :: status
 
-    this%betas_boot = this%fit_glm_helper(triangle_boot, use_mask, status)
+    type(t_glm_res) :: res
+
+    res = this%fit_glm_helper(triangle_boot, use_mask, .false., status)
+    this%betas_boot = res%betas
+    this%disp_boot = res%disp
   end subroutine fit_glm_boot
 
   subroutine destructor(this)
