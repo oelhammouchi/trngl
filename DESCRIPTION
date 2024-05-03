@@ -1,0 +1,24 @@
+Package: claimsBoot
+Type: Package
+Title: Bootstrap Simulations for Claims Reserving
+Version: 1.0
+Date: 2023-02-08
+Author: Othman El Hammouchi
+Maintainer: Othman El Hammouchi <othman.el.hammouchi@protonmail.com>
+Description: This package provides simulation-based checks for the 
+    assumptions of the Mack and ODP actuarial reserving models. The bootstrap
+    simulations are implemented efficiently using the OpenMP parllelism library.
+License: MIT
+Depends: R (>= 3.5.0)
+Imports: Rcpp (>= 0.11.0), data.table, ChainLadder, rTRNG, RcppProgress, ggplot2, ggrepel, reshape2, rlang
+LinkingTo: Rcpp, RcppThread, RcppArmadillo, BH, rTRNG, RcppProgress
+Suggests: 
+    RUnit,
+    testthat (>= 3.0.0)
+LazyData: true
+Encoding: UTF-8
+RoxygenNote: 7.2.3
+Roxygen: list(load = "source", old_usage = TRUE)
+NeedsCompilation: yes
+Packaged: 2023-02-26 18:07:38 UTC; othman
+Config/testthat/edition: 3
