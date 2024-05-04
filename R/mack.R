@@ -1,7 +1,7 @@
 #' @importFrom rlang .data
 #' @exportS3Method plot mack.single
-plot.mack.single <- function(res) {
-  plt.df <- reshape2::melt(res$reserves, varnames = c("sim.idx", "point"))
+plot.mack.single <- function(x, ...) {
+  plt.df <- reshape2::melt(x$reserves, varnames = c("sim.idx", "point"))
   ggplot2::ggplot(plt.df) +
     ggplot2::geom_density(ggplot2::aes(.data$value, col = factor(.data$point))) +
     ggplot2::xlab("Reserve") +
@@ -11,8 +11,8 @@ plot.mack.single <- function(res) {
 
 #' @importFrom rlang .data
 #' @exportS3Method plot mack.calendar
-plot.mack.calendar <- function(res) {
-  plt.df <- reshape2::melt(res$reserves, varnames = c("sim.idx", "cal.year"))
+plot.mack.calendar <- function(x, ...) {
+  plt.df <- reshape2::melt(x$reserves, varnames = c("sim.idx", "cal.year"))
   ggplot2::ggplot(plt.df) +
     ggplot2::geom_density(ggplot2::aes(.data$value, col = factor(.data$cal.year))) +
     ggplot2::xlab("Reserve") +
@@ -22,8 +22,8 @@ plot.mack.calendar <- function(res) {
 
 #' @importFrom rlang .data
 #' @exportS3Method plot mack.origin
-plot.mack.origin <- function(res) {
-  plt.df <- reshape2::melt(res$reserves, varnames = c("sim.idx", "origin.year"))
+plot.mack.origin <- function(x, ...) {
+  plt.df <- reshape2::melt(x$reserves, varnames = c("sim.idx", "origin.year"))
   ggplot2::ggplot(plt.df) +
     ggplot2::geom_density(ggplot2::aes(.data$value, col = factor(.data$origin.year))) +
     ggplot2::xlab("Reserve") +
@@ -32,11 +32,11 @@ plot.mack.origin <- function(res) {
 }
 
 #' @export
-format.mack.single <- function(res, ...) {}
+format.mack.single <- function(x, ...) {}
 
 #' @export
-print.mack.single <- function(res, ...) {
-  cat(format(res, ...), "\n")
+print.mack.single <- function(x, ...) {
+  cat(format(x, ...), "\n")
 }
 
 #' Perform a parametric bootstrap of the Mack chain ladder model.

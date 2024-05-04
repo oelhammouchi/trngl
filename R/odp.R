@@ -1,12 +1,12 @@
 #' @importFrom rlang .data
 #' @exportS3Method plot odp.single
-plot.odp.single <- function(res) {
-  plt.df <- reshape2::melt(res$reserves, varnames = c("sim.idx", "point"))
+plot.odp.single <- function(x, ...) {
+  plt.df <- reshape2::melt(x$reserves, varnames = c("sim.idx", "point"))
 
-  label.df <- do.call(rbind, lapply(seq_len(ncol(res$reserves)), function(j) {
-    point <- res$col_mapping[[j]]
+  label.df <- do.call(rbind, lapply(seq_len(ncol(x$reserves)), function(j) {
+    point <- x$col_mapping[[j]]
 
-    z <- density(res$reserves[, j])
+    z <- density(x$reserves[, j])
 
     x.candidates <- z$x[z$x > quantile(z$x, 0.1) & z$x < quantile(z$x, 0.9)]
     y.candidates <- z$y[z$x > quantile(z$x, 0.1) & z$x < quantile(z$x, 0.9)]
@@ -32,8 +32,8 @@ plot.odp.single <- function(res) {
 
 #' @importFrom rlang .data
 #' @exportS3Method plot odp.calendar
-plot.odp.calendar <- function(res) {
-  plt.df <- reshape2::melt(res$reserves, varnames = c("sim.idx", "cal.year"))
+plot.odp.calendar <- function(x, ...) {
+  plt.df <- reshape2::melt(x$reserves, varnames = c("sim.idx", "cal.year"))
   ggplot2::ggplot(plt.df) +
     ggplot2::geom_density(
       ggplot2::aes(.data$value, col = factor(.data$cal.year))
@@ -45,8 +45,8 @@ plot.odp.calendar <- function(res) {
 
 #' @importFrom rlang .data
 #' @exportS3Method plot odp.origin
-plot.odp.origin <- function(res) {
-  plt.df <- reshape2::melt(res$reserves, varnames = c("sim.idx", "origin.year"))
+plot.odp.origin <- function(x, ...) {
+  plt.df <- reshape2::melt(x$reserves, varnames = c("sim.idx", "origin.year"))
   ggplot2::ggplot(plt.df) +
     ggplot2::geom_density(
       ggplot2::aes(.data$value, col = factor(.data$origin.year))
@@ -57,11 +57,11 @@ plot.odp.origin <- function(res) {
 }
 
 #' @export
-format.odp.single <- function(res, ...) {}
+format.odp.single <- function(x, ...) {}
 
 #' @export
-print.odp.single <- function(res, ...) {
-  cat(format(res, ...), "\n")
+print.odp.single <- function(x, ...) {
+  cat(format(x, ...), "\n")
 }
 
 #' @export
@@ -165,12 +165,6 @@ odpResidSim <- function(trngl, sim_type, n_boot = 1e3, n_sim = 1e3, progress = T
   for (k in seq_len(ncol(res$reserves))) {
     dist[k] <- klDivergence(ref$reserve, res$reserves[, k])
     if (progress) cli::cli_progress_update()
-  }
-
-
-  dist <- rep(0, ncol(res$reserves))
-  for (k in seq_len(ncol(res$reserves))) {
-    dist[k] <- mean(FNN::KL.dist(ref$reserve, res$reserves[, k]))
   }
 
   k_max <- which.max(dist)

@@ -36,14 +36,14 @@ cumCheck <- function(triangle) {
 }
 
 #' @export
-as.trngl <- function(trngl, ...) {
+as.trngl <- function(triangle, ...) {
   UseMethod("as.trngl")
 }
 
 #' @exportS3Method
-as.trngl.trngl <- function(trngl, ...) {
-  attr(trngl, "outliers") <- list()
-  return(trngl)
+as.trngl.trngl <- function(triangle, ...) {
+  attr(triangle, "outliers") <- list()
+  return(triangle)
 }
 
 #' @exportS3Method
@@ -71,16 +71,16 @@ as.trngl.matrix <- function(triangle, ...) {
 }
 
 #' @exportS3Method
-format.trngl <- function(trngl, ...) {
+format.trngl <- function(x, ...) {
   out.str <- ""
-  for (i in seq_len(nrow(trngl))) {
-    for (j in seq_len(ncol(trngl) + 1 - i)) {
-      if (any(sapply(attr(trngl, "outliers"), function(point) {
+  for (i in seq_len(nrow(x))) {
+    for (j in seq_len(ncol(x) + 1 - i)) {
+      if (any(sapply(attr(x, "outliers"), function(point) {
         all(c(i, j) == point)
       }))) {
-        out.str <- paste(out.str, cli::col_red(as.character(trngl[i, j])), sep = "\t")
+        out.str <- paste(out.str, cli::col_red(as.character(x[i, j])), sep = "\t")
       } else {
-        out.str <- paste(out.str, trngl[i, j], sep = "\t")
+        out.str <- paste(out.str, x[i, j], sep = "\t")
       }
     }
     out.str <- paste0(out.str, "\n")
@@ -90,7 +90,7 @@ format.trngl <- function(trngl, ...) {
 }
 
 #' @exportS3Method
-print.trngl <- function(trngl, ...) cat(format(trngl, ...), "\n")
+print.trngl <- function(x, ...) cat(format(x, ...), "\n")
 
 
 #' Convert cumulative triangle to incremental one.
