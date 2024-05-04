@@ -40,13 +40,13 @@ as.trngl <- function(triangle, ...) {
   UseMethod("as.trngl")
 }
 
-#' @exportS3Method
+#' @export
 as.trngl.trngl <- function(triangle, ...) {
   attr(triangle, "outliers") <- list()
   return(triangle)
 }
 
-#' @exportS3Method
+#' @export
 as.trngl.matrix <- function(triangle, ...) {
   if (!(nrow(triangle) == ncol(triangle))) {
     cli::cli_abort(c(
@@ -70,7 +70,7 @@ as.trngl.matrix <- function(triangle, ...) {
   )
 }
 
-#' @exportS3Method
+#' @export
 format.trngl <- function(x, ...) {
   out.str <- ""
   for (i in seq_len(nrow(x))) {
@@ -89,7 +89,7 @@ format.trngl <- function(x, ...) {
   return(out.str)
 }
 
-#' @exportS3Method
+#' @export
 print.trngl <- function(x, ...) cat(format(x, ...), "\n")
 
 

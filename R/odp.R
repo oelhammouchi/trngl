@@ -1,5 +1,5 @@
 #' @importFrom rlang .data
-#' @exportS3Method plot odp.single
+#' @export
 plot.odp.single <- function(x, ...) {
   plt.df <- reshape2::melt(x$reserves, varnames = c("sim.idx", "point"))
 
@@ -31,7 +31,7 @@ plot.odp.single <- function(x, ...) {
 }
 
 #' @importFrom rlang .data
-#' @exportS3Method plot odp.calendar
+#' @export
 plot.odp.calendar <- function(x, ...) {
   plt.df <- reshape2::melt(x$reserves, varnames = c("sim.idx", "cal.year"))
   ggplot2::ggplot(plt.df) +
@@ -44,7 +44,7 @@ plot.odp.calendar <- function(x, ...) {
 }
 
 #' @importFrom rlang .data
-#' @exportS3Method plot odp.origin
+#' @export
 plot.odp.origin <- function(x, ...) {
   plt.df <- reshape2::melt(x$reserves, varnames = c("sim.idx", "origin.year"))
   ggplot2::ggplot(plt.df) +

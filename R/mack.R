@@ -1,5 +1,5 @@
 #' @importFrom rlang .data
-#' @exportS3Method plot mack.single
+#' @export
 plot.mack.single <- function(x, ...) {
   plt.df <- reshape2::melt(x$reserves, varnames = c("sim.idx", "point"))
   ggplot2::ggplot(plt.df) +
@@ -10,7 +10,7 @@ plot.mack.single <- function(x, ...) {
 }
 
 #' @importFrom rlang .data
-#' @exportS3Method plot mack.calendar
+#' @export
 plot.mack.calendar <- function(x, ...) {
   plt.df <- reshape2::melt(x$reserves, varnames = c("sim.idx", "cal.year"))
   ggplot2::ggplot(plt.df) +
@@ -21,7 +21,7 @@ plot.mack.calendar <- function(x, ...) {
 }
 
 #' @importFrom rlang .data
-#' @exportS3Method plot mack.origin
+#' @export
 plot.mack.origin <- function(x, ...) {
   plt.df <- reshape2::melt(x$reserves, varnames = c("sim.idx", "origin.year"))
   ggplot2::ggplot(plt.df) +
