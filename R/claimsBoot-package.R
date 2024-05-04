@@ -1,7 +1,7 @@
 #' claimsBoot
-#' 
+#'
 #' Bootstrap simulation for actuarial reserving models.
-#' 
+#'
 #' @docType package
 #' @author Othman El Hammouchi <othman.el.hammouchi@protonmail.com>
 #' @import Rcpp data.table ggplot2
@@ -14,5 +14,6 @@
 
 #' @inherit ChainLadder::UKMotor title
 #' @description Re-export of \link[ChainLadder]{UKMotor}
+#' @include trngl.R
 #' @export
-UKMotor <- unclass(ChainLadder::UKMotor)
+UKMotor <- as.trngl(ChainLadder::UKMotor)
