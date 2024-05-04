@@ -4,8 +4,6 @@
 #'
 #' @docType package
 #' @author Othman El Hammouchi <othman.el.hammouchi@protonmail.com>
-#' @import Rcpp data.table ggplot2
-#' @importFrom parallel detectCores
 #' @importFrom rTRNG TRNG.Version
 #' @useDynLib claimsBoot
 #' @name claimsBoot
