@@ -1,4 +1,3 @@
-#' @export
 cumCheck <- function(triangle) {
   conds <- sapply(seq_len(nrow(triangle)), function(i) {
     row <- triangle[i, ]
@@ -7,14 +6,17 @@ cumCheck <- function(triangle) {
   })
 
   msg <- c(
-    "{.var triangle} must a cumulative when {.var type} is 'Mack'."
+    "{.var triangle} must a cumulative"
   )
   for (i in seq_along(conds)) {
     if (!conds[i]) {
       msg <- c(msg, "i" = "Row {i} is not increasing.")
     }
   }
-  return(list(test = all(conds), msg = msg))
+
+  if (!all(conds)) {
+    cli::cli_abort(msg)
+  }
 }
 
 # When a new value is assigned to a triangle element, it's not certain that the
@@ -23,18 +25,26 @@ cumCheck <- function(triangle) {
 #' @export
 `[<-.trngl` <- function(trngl, i, j, value) {
   candidate <- NextMethod()
-  res <- cumCheck(candidate)
 
-  if (!res$test) {
-    cli::cli_abort(c(
-      "Could not complete assigment",
-      "i" = "Assignment would lead to defective triangle"
-    ))
-  } else {
-    candidate
-  }
+  tryCatch(
+    {
+      cumCheck(candidate)
+    },
+    error = function(err) {
+      cli::cli_abort(c(
+        "Could not complete assigment",
+        "i" = "Assignment would lead to defective triangle"
+      ))
+    }
+  )
+
+  candidate
 }
 
+#' Coerce to trngl
+#'
+#'
+#' @param triangle A *cumulative* claims triangle
 #' @export
 as.trngl <- function(triangle, ...) {
   UseMethod("as.trngl")
@@ -56,10 +66,7 @@ as.trngl.matrix <- function(triangle, ...) {
     ))
   }
 
-  res <- cumCheck(triangle)
-  if (!res$test) {
-    cli::cli_abort(res$msg)
-  }
+  cumCheck(triangle)
 
   return(
     structure(
@@ -72,21 +79,21 @@ as.trngl.matrix <- function(triangle, ...) {
 
 #' @export
 format.trngl <- function(x, ...) {
-  out.str <- ""
+  out <- c()
   for (i in seq_len(nrow(x))) {
+    row <- ""
     for (j in seq_len(ncol(x) + 1 - i)) {
       if (any(sapply(attr(x, "outliers"), function(point) {
         all(c(i, j) == point)
       }))) {
-        out.str <- paste(out.str, cli::col_red(as.character(x[i, j])), sep = "\t")
+        row <- paste(row, cli::col_red(as.character(x[i, j])), sep = "\u00a0")
       } else {
-        out.str <- paste(out.str, x[i, j], sep = "\t")
+        row <- paste(row, x[i, j], sep = "\u00a0")
       }
     }
-    out.str <- paste0(out.str, "\n")
+    out <- c(out, row)
   }
-
-  return(out.str)
+  return(cli::boxx(out, width = nchar(out[1]) + 10, padding = c(0, 1, 0, 1)))
 }
 
 #' @export
