@@ -1,69 +1,30 @@
-#' @importFrom rlang .data
 #' @export
-plot.odp.single <- function(x, ...) {
-  plt.df <- reshape2::melt(x$reserves, varnames = c("sim.idx", "point"))
-
-  label.df <- do.call(rbind, lapply(seq_len(ncol(x$reserves)), function(j) {
-    point <- x$col_mapping[[j]]
-
-    z <- density(x$reserves[, j])
-
-    x.candidates <- z$x[z$x > quantile(z$x, 0.1) & z$x < quantile(z$x, 0.9)]
-    y.candidates <- z$y[z$x > quantile(z$x, 0.1) & z$x < quantile(z$x, 0.9)]
-    idx <- sample(seq_along(x.candidates), size = 1)
-    x <- x.candidates[idx]
-    y <- y.candidates[idx]
-
-    data.frame(label = sprintf("(%i, %i)", point[1], point[2]), x = x, y = y)
-  }))
-
-  ggplot2::ggplot(plt.df) +
-    ggrepel::geom_text_repel(ggplot2::aes(.data$x, .data$y, label = .data$label),
-      data = label.df,
-      force = 10,
-      min.segment.length = 0
-    ) +
-    ggplot2::geom_density(ggplot2::aes(x = .data$value, y = ggplot2::after_stat(density), col = factor(.data$point))) +
-    ggplot2::ggtitle("Simulated reserve densities for different omitted points") +
-    ggplot2::xlab("Reserve") +
-    ggplot2::ylab("Probability density") +
-    ggplot2::guides(colour = "none")
-}
-
-#' @importFrom rlang .data
-#' @export
-plot.odp.calendar <- function(x, ...) {
-  plt.df <- reshape2::melt(x$reserves, varnames = c("sim.idx", "cal.year"))
-  ggplot2::ggplot(plt.df) +
-    ggplot2::geom_density(
-      ggplot2::aes(.data$value, col = factor(.data$cal.year))
-    ) +
-    ggplot2::xlab("Reserve") +
-    ggplot2::ylab("Probability density") +
-    ggplot2::guides(colour = ggplot2::guide_legend(title = "Ommitted calendar year"))
-}
-
-#' @importFrom rlang .data
-#' @export
-plot.odp.origin <- function(x, ...) {
-  plt.df <- reshape2::melt(x$reserves, varnames = c("sim.idx", "origin.year"))
-  ggplot2::ggplot(plt.df) +
-    ggplot2::geom_density(
-      ggplot2::aes(.data$value, col = factor(.data$origin.year))
-    ) +
-    ggplot2::xlab("Reserve") +
-    ggplot2::ylab("Probability density") +
-    ggplot2::guides(colour = ggplot2::guide_legend(title = "Ommitted origin year"))
+format.odp <- function(x, ...) {
+  cli::cli_fmt(collapse = TRUE, {
+    cli::cli_rule(left = "ODP bootstrap simulation test")
+    cli::cli_ul()
+    cli::cli_li("bootstrap iterations: {x$n_boot}")
+    cli::cli_li("simulation iterations: {x$n_sim}")
+    cli::cli_li("status:")
+  })
 }
 
 #' @export
-format.odp.single <- function(x, ...) {}
-
-#' @export
-print.odp.single <- function(x, ...) {
+print.odp <- function(x, ...) {
   cat(format(x, ...), "\n")
 }
 
+#' Bootstrapping and simulation functions for the overdispersed Poisson model
+#' @param trngl A *cumulative* claims triangle
+#' @param dist Distribution from which to simulate: "normal", "gamma" or "poisson"
+#' @param sim_type Type of simulation: "single", "origin" or "calendar"
+#' @param n_boot Number of bootstrap iterations
+#' @param n_sim Number of simulation iterations
+#' @param progress Whether to show progress
+#' @name odp
+NULL
+
+#' @rdname odp
 #' @export
 odpParamBoot <- function(trngl, dist, n_boot = 1e3, n_sim = 1e3, progress = TRUE) {
   if (!inherits(trngl, "trngl")) {
@@ -81,6 +42,7 @@ odpParamBoot <- function(trngl, dist, n_boot = 1e3, n_sim = 1e3, progress = TRUE
   return(.odpParamBoot(cum2incr(trngl), dist, n_boot, n_sim, progress))
 }
 
+#' @rdname odp
 #' @export
 odpResidBoot <- function(trngl, n_boot = 1e3, n_sim = 1e3, progress = TRUE) {
   if (!inherits(trngl, "trngl")) {
@@ -98,7 +60,7 @@ odpResidBoot <- function(trngl, n_boot = 1e3, n_sim = 1e3, progress = TRUE) {
   return(.odpResidBoot(cum2incr(trngl), n_boot, n_sim, progress))
 }
 
-
+#' @rdname odp
 #' @export
 odpParamSim <- function(trngl, sim_type, dist, n_boot = 1e3, n_sim = 1e3, progress = TRUE) {
   trngl.name <- deparse(substitute(trngl))
@@ -117,17 +79,26 @@ odpParamSim <- function(trngl, sim_type, dist, n_boot = 1e3, n_sim = 1e3, progre
 
   res <- .odpParamSim(cum2incr(trngl), sim_type, dist, n_boot, n_sim, progress)
 
-  if (progress) cli::cli_progress_step("Flagging outliers")
-  ref <- odpParamBoot(trngl, dist, n_boot, n_sim, progress = FALSE)
+  if (progress) {
+    n <- ncol(res$reserves) # nolint
+    k <- 0
+    cli::cli_alert_info("Flagging outliers")
+    cli::cli_progress_bar(
+      format = "{cli::pb_spin} Processed {k} out of {n}",
+      format_done = "{cli::col_green(cli::symbol$tick)} Done",
+      total = n,
+      clear = FALSE
+    )
+  }
 
+  ref <- odpParamBoot(trngl, dist, n_boot, n_sim, progress = FALSE)
   dist <- rep(0, ncol(res$reserves))
-  n <- ncol(res$reserves) # nolint
-  k <- 0
-  if (progress) cli::cli_progress_step("Processed {k} out of {n}")
+
   for (k in seq_len(ncol(res$reserves))) {
     dist[k] <- klDivergence(ref$reserve, res$reserves[, k])
     if (progress) cli::cli_progress_update()
   }
+  cli::cli_progress_done()
 
   k_max <- which.max(dist)
   outlier <- res$col_mapping[[k_max]]
@@ -137,6 +108,7 @@ odpParamSim <- function(trngl, sim_type, dist, n_boot = 1e3, n_sim = 1e3, progre
   return(res)
 }
 
+#' @rdname odp
 #' @export
 odpResidSim <- function(trngl, sim_type, n_boot = 1e3, n_sim = 1e3, progress = TRUE) {
   trngl.name <- deparse(substitute(trngl))
@@ -155,17 +127,26 @@ odpResidSim <- function(trngl, sim_type, n_boot = 1e3, n_sim = 1e3, progress = T
 
   res <- .odpResidSim(cum2incr(trngl), sim_type, n_boot, n_sim, progress)
 
-  if (progress) cli::cli_progress_step("Flagging outliers")
-  ref <- odpResidBoot(trngl, n_boot, n_sim, progress = FALSE)
+  if (progress) {
+    n <- ncol(res$reserves) # nolint
+    k <- 0
+    cli::cli_alert_info("Flagging outliers")
+    cli::cli_progress_bar(
+      format = "{cli::pb_spin} Processed {k} out of {n}",
+      format_done = "{cli::col_green(cli::symbol$tick)} Done",
+      total = n,
+      clear = FALSE
+    )
+  }
 
+  ref <- odpResidBoot(trngl, n_boot, n_sim, progress = FALSE)
   dist <- rep(0, ncol(res$reserves))
-  n <- ncol(res$reserves) # nolint
-  k <- 0
-  if (progress) cli::cli_progress_step("Processed {k} out of {n}")
   for (k in seq_len(ncol(res$reserves))) {
     dist[k] <- klDivergence(ref$reserve, res$reserves[, k])
     if (progress) cli::cli_progress_update()
   }
+  cli::cli_progress_done()
+
 
   k_max <- which.max(dist)
   outlier <- res$col_mapping[[k_max]]

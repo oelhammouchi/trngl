@@ -1,52 +1,32 @@
-#' @importFrom rlang .data
 #' @export
-plot.mack.single <- function(x, ...) {
-  plt.df <- reshape2::melt(x$reserves, varnames = c("sim.idx", "point"))
-  ggplot2::ggplot(plt.df) +
-    ggplot2::geom_density(ggplot2::aes(.data$value, col = factor(.data$point))) +
-    ggplot2::xlab("Reserve") +
-    ggplot2::ylab("Probability density") +
-    ggplot2::guides(colour = ggplot2::guide_legend(title = "Ommitted point"))
-}
-
-#' @importFrom rlang .data
-#' @export
-plot.mack.calendar <- function(x, ...) {
-  plt.df <- reshape2::melt(x$reserves, varnames = c("sim.idx", "cal.year"))
-  ggplot2::ggplot(plt.df) +
-    ggplot2::geom_density(ggplot2::aes(.data$value, col = factor(.data$cal.year))) +
-    ggplot2::xlab("Reserve") +
-    ggplot2::ylab("Probability density") +
-    ggplot2::guides(colour = ggplot2::guide_legend(title = "Ommitted calendar year"))
-}
-
-#' @importFrom rlang .data
-#' @export
-plot.mack.origin <- function(x, ...) {
-  plt.df <- reshape2::melt(x$reserves, varnames = c("sim.idx", "origin.year"))
-  ggplot2::ggplot(plt.df) +
-    ggplot2::geom_density(ggplot2::aes(.data$value, col = factor(.data$origin.year))) +
-    ggplot2::xlab("Reserve") +
-    ggplot2::ylab("Probability density") +
-    ggplot2::guides(colour = ggplot2::guide_legend(title = "Ommitted origin year"))
+format.mack <- function(x, ...) {
+  cli::cli_fmt(collapse = TRUE, {
+    cli::cli_rule(left = "Mack bootstrap simulation test")
+    cli::cli_ul()
+    cli::cli_li("bootstrap iterations: {x$n_boot}")
+    cli::cli_li("simulation iterations: {x$n_sim}")
+    cli::cli_li("status:")
+  })
 }
 
 #' @export
-format.mack.single <- function(x, ...) {}
-
-#' @export
-print.mack.single <- function(x, ...) {
+print.mack <- function(x, ...) {
   cat(format(x, ...), "\n")
 }
 
-#' Perform a parametric bootstrap of the Mack chain ladder model.
-#'
-#' @param triangle Cumulative claims triangle
-#' @param dist Distribution
-#' @param cond Should the bootstrap should be conditional? Default is `TRUE`.
-#' @param n_boot Number of iterations in the parameter bootstrap step. Default is 1000.
-#' @param n_sim Number of iterations in the simulation step. Default is 10.
-#' @param progress Show progress? Default is `TRUE.
+#' Bootstrapping and simulation functions for the Mack chain ladder model
+#' @param trngl A *cumulative* claims triangle
+#' @param dist Distribution from which to simulate: "normal", "gamma" or "poisson"
+#' @param resid_type Which type of residuals to use: "standardised", "studentised" or "log-normal"
+#' @param cond Whether the bootstrap should be conditional
+#' @param sim_type Type of simulation: "single", "origin" or "calendar"
+#' @param n_boot Number of bootstrap iterations
+#' @param n_sim Number of simulation iterations
+#' @param progress Whether to show progress
+#' @name mack
+NULL
+
+#' @rdname mack
 #' @export
 mackParamBoot <- function(trngl, dist, cond, n_boot = 1e3, n_sim = 10, progress = TRUE) {
   if (!inherits(trngl, "trngl")) {
@@ -65,15 +45,7 @@ mackParamBoot <- function(trngl, dist, cond, n_boot = 1e3, n_sim = 10, progress 
   return(.mackParamBoot(trngl, dist, cond, n_boot, n_sim, progress))
 }
 
-#' Perform a semiparametric bootstrap of the Mack chain ladder model.
-#'
-#' @param triangle Cumulative claims triangle
-#' @param resid_type Type of residuals to use in bootstrap. Possible choices are
-#' `"standardised"`, `"studentised"` and `"log-normal"`.
-#' @param cond Should the bootstrap should be conditional? Default is `TRUE`.
-#' @param n_boot Number of iterations in the parameter bootstrap step. Default is 1000.
-#' @param n_sim Number of iterations in the simulation step. Default is 10.
-#' @param progress Show progress? Default is `TRUE.
+#' @rdname mack
 #' @export
 mackResidBoot <- function(trngl, resid_type, cond, n_boot = 1e3, n_sim = 10, progress = TRUE) {
   if (!inherits(trngl, "trngl")) {
@@ -92,12 +64,7 @@ mackResidBoot <- function(trngl, resid_type, cond, n_boot = 1e3, n_sim = 10, pro
   return(.mackResidBoot(trngl, resid_type, cond, n_boot, n_sim, progress))
 }
 
-#' Perform a pairs bootstrap of the Mack chain ladder model.
-#'
-#' @param triangle Cumulative claims triangle
-#' @param n_boot Number of iterations in the parameter bootstrap step. Default is 1000.
-#' @param n_sim Number of iterations in the simulation step. Default is 10.
-#' @param progress Show progress? Default is `TRUE.
+#' @rdname mack
 #' @export
 mackPairsBoot <- function(trngl, n_boot = 1e3, n_sim = 10, progress = TRUE) {
   if (!inherits(trngl, "trngl")) {
@@ -116,12 +83,7 @@ mackPairsBoot <- function(trngl, n_boot = 1e3, n_sim = 10, progress = TRUE) {
   return(.mackPairsBoot(trngl, n_boot, n_sim, progress))
 }
 
-#' Perform a pairs bootstrap of the Mack chain ladder model.
-#'
-#' @param triangle Cumulative claims triangle
-#' @param n_boot Number of iterations in the parameter bootstrap step. Default is 1000.
-#' @param n_sim Number of iterations in the simulation step. Default is 10.
-#' @param progress Show progress? Default is `TRUE.
+#' @rdname mack
 #' @export
 mackPairsSim <- function(trngl, sim_type, n_boot = 1e3, n_sim = 10, progress = TRUE) {
   trngl.name <- deparse(substitute(trngl))
@@ -140,17 +102,25 @@ mackPairsSim <- function(trngl, sim_type, n_boot = 1e3, n_sim = 10, progress = T
 
   res <- .mackPairsSim(trngl, sim_type, n_boot, n_sim, progress)
 
-  if (progress) cli::cli_progress_step("Flagging outliers")
-  ref <- mackPairsBoot(trngl, n_boot, n_sim, progress = FALSE)
+  if (progress) {
+    n <- ncol(res$reserves) # nolint
+    k <- 0
+    cli::cli_alert_info("Flagging outliers")
+    cli::cli_progress_bar(
+      format = "{cli::pb_spin} Processed {k} out of {n}",
+      format_done = "{cli::col_green(cli::symbol$tick)} Done",
+      total = n,
+      clear = FALSE
+    )
+  }
 
+  ref <- mackPairsBoot(trngl, n_boot, n_sim, progress = FALSE)
   dist <- rep(0, ncol(res$reserves))
-  n <- ncol(res$reserves) # nolint
-  k <- 0
-  if (progress) cli::cli_progress_step("Processed {k} out of {n}")
   for (k in seq_len(ncol(res$reserves))) {
     dist[k] <- klDivergence(ref$reserve, res$reserves[, k])
     if (progress) cli::cli_progress_update()
   }
+  cli::cli_process_done()
 
   k_max <- which.max(dist)
   outlier <- res$col_mapping[[k_max]]
@@ -160,6 +130,7 @@ mackPairsSim <- function(trngl, sim_type, n_boot = 1e3, n_sim = 10, progress = T
   return(res)
 }
 
+#' @rdname mack
 #' @export
 mackParamSim <- function(trngl, sim_type, cond, dist, n_boot = 1e3, n_sim = 10, progress = TRUE) {
   trngl.name <- deparse(substitute(trngl))
@@ -178,17 +149,25 @@ mackParamSim <- function(trngl, sim_type, cond, dist, n_boot = 1e3, n_sim = 10, 
 
   res <- .mackParamSim(trngl, sim_type, cond, dist, n_boot, n_sim, progress)
 
-  if (progress) cli::cli_progress_step("Flagging outliers")
-  ref <- mackParamBoot(trngl, dist, cond, n_boot, n_sim, progress = FALSE)
+  if (progress) {
+    n <- ncol(res$reserves) # nolint
+    k <- 0
+    cli::cli_alert_info("Flagging outliers")
+    cli::cli_progress_bar(
+      format = "{cli::pb_spin} Processed {k} out of {n}",
+      format_done = "{cli::col_green(cli::symbol$tick)} Done",
+      total = n,
+      clear = FALSE
+    )
+  }
 
+  ref <- mackParamBoot(trngl, dist, cond, n_boot, n_sim, progress = FALSE)
   dist <- rep(0, ncol(res$reserves))
-  n <- ncol(res$reserves) # nolint
-  k <- 0
-  if (progress) cli::cli_progress_step("Processed {k} out of {n}")
   for (k in seq_len(ncol(res$reserves))) {
     dist[k] <- klDivergence(ref$reserve, res$reserves[, k])
     if (progress) cli::cli_progress_update()
   }
+  cli::cli_progress_done()
 
   k_max <- which.max(dist)
   outlier <- res$col_mapping[[k_max]]
@@ -198,6 +177,7 @@ mackParamSim <- function(trngl, sim_type, cond, dist, n_boot = 1e3, n_sim = 10, 
   return(res)
 }
 
+#' @rdname mack
 #' @export
 mackResidSim <- function(trngl, sim_type, cond, resid_type, n_boot = 1e3, n_sim = 10, progress = TRUE) {
   trngl.name <- deparse(substitute(trngl))
@@ -216,17 +196,25 @@ mackResidSim <- function(trngl, sim_type, cond, resid_type, n_boot = 1e3, n_sim 
 
   res <- .mackResidSim(trngl, sim_type, cond, resid_type, n_boot, n_sim, progress)
 
-  if (progress) cli::cli_progress_step("Flagging outliers")
-  ref <- mackResidBoot(trngl, resid_type, cond, n_boot, n_sim, progress = FALSE)
+  if (progress) {
+    n <- ncol(res$reserves) # nolint
+    k <- 0
+    cli::cli_alert_info("Flagging outliers")
+    cli::cli_progress_bar(
+      format = "{cli::pb_spin} Processed {k} out of {n}",
+      format_done = "{cli::col_green(cli::symbol$tick)} Done",
+      total = n,
+      clear = FALSE
+    )
+  }
 
+  ref <- mackResidBoot(trngl, resid_type, cond, n_boot, n_sim, progress = FALSE)
   dist <- rep(0, ncol(res$reserves))
-  n <- ncol(res$reserves) # nolint
-  k <- 0
-  if (progress) cli::cli_progress_step("Processed {k} out of {n}")
   for (k in seq_len(ncol(res$reserves))) {
     dist[k] <- klDivergence(ref$reserve, res$reserves[, k])
     if (progress) cli::cli_progress_update()
   }
+  cli::cli_progress_done()
 
   k_max <- which.max(dist)
   outlier <- res$col_mapping[[k_max]]
