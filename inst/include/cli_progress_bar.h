@@ -14,7 +14,7 @@ class CliProgressBar : public ProgressBar {
     ~CliProgressBar() {}
 
    public:
-    void display() { REprintf("\033[37mRunning simulations "); }
+    void display() { Rprintf("\033[37mRunning simulations "); }
 
     void update(float progress) {
         _update_ticks_display(progress);
@@ -42,7 +42,7 @@ class CliProgressBar : public ProgressBar {
         int nb_ticks = _compute_nb_ticks(progress);
         int delta = nb_ticks - _ticks_displayed;
         if (delta > 0) {
-            REprintf("\r");
+            Rprintf("\r");
             _ticks_displayed = nb_ticks;
             _display_ticks(progress);
         }
@@ -51,7 +51,7 @@ class CliProgressBar : public ProgressBar {
     void _finalize_display() {
         if (_finalized) return;
 
-        REprintf("\n");
+        Rprintf("\n");
         flush_console();
         _finalized = true;
     }
@@ -59,18 +59,16 @@ class CliProgressBar : public ProgressBar {
     int _compute_nb_ticks(float progress) { return int(progress * _max_ticks); }
 
     void _display_ticks(double progress) {
-        REprintf("\033[37mRunning simulations ");
+        Rprintf("\033[37mRunning simulations ");
         for (int i = 0; i < _ticks_displayed; ++i) {
-            REprintf("\033[32m\u25A0");
+            Rprintf("\033[32m\u25A0");
             R_FlushConsole();
         }
         for (int i = 0; i < (_max_ticks - _ticks_displayed); i++) {
-            REprintf(" ");
+            Rprintf(" ");
             R_FlushConsole();
         }
-        char end[30];
-        sprintf(end, "\033[37m | %d%%", int(progress * 100));
-        REprintf("%s", end);
+        Rprintf("\033[37m | %d%%", int(progress * 100));
     }
 
     // N.B: does nothing on windows
