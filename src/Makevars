@@ -1,9 +1,9 @@
 CXX_STD = CXX17
 
-PKG_FFLAGS = -fPIC $(SHLIB_OPENMP_FFLAGS)
-PKG_CPPFLAGS =	-I../inst/include/ $(SHLIB_OPENMP_CXXFLAGS)
-
-PKG_LIBS += $(shell ${R_HOME}/bin/Rscript -e "rTRNG::LdFlags()")
+PKG_CPPFLAGS = -I../inst/include/
+PKG_FFLAGS = $(SHLIB_OPENMP_FFLAGS)
+PKG_CXXLAGS = $(SHLIB_OPENMP_CXXFLAGS)
+PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS) `"$(R_HOME)/bin$(R_ARCH_BIN)/Rscript" -e 'rTRNG::LdFlags()'`
 
 all: $(SHLIB)
 
