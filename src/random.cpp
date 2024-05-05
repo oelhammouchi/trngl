@@ -3,7 +3,7 @@
 #include <Rcpp.h>
 #include <omp.h>
 
-#include <boost/math/distributions/gamma.hpp>
+#include <boost/math/distributions/poisson.hpp>
 #include <trng/gamma_dist.hpp>
 #include <trng/normal_dist.hpp>
 #include <trng/poisson_dist.hpp>
@@ -17,37 +17,33 @@ double rpois(double mean);
 }
 
 double rnorm(double mean, double sd) {
-    ClaimsBootRng& rng = ClaimsBootRng::get();
+    TrnglRng& rng = TrnglRng::get();
     int i_thread = omp_get_thread_num();
-    rng.engine().jump(2 * (i_thread / rng.n_threads()));
     trng::normal_dist<double> dist(mean, sd);
-    double n = dist(rng.engine());
-    return n;
+    return dist(rng.thread_engines().at(i_thread));
 }
 
 double rgamma(double shape, double scale) {
-    ClaimsBootRng& rng = ClaimsBootRng::get();
+    TrnglRng& rng = TrnglRng::get();
     int i_thread = omp_get_thread_num();
-    rng.engine().jump(2 * (i_thread / rng.n_threads()));
     trng::uniform01_dist<double> dist;
-    double u = dist(rng.engine());
+    double u = dist(rng.thread_engines().at(i_thread));
     return R::qgamma(u, shape, scale, true, false);
 }
 
 double runif() {
-    ClaimsBootRng& rng = ClaimsBootRng::get();
+    TrnglRng& rng = TrnglRng::get();
     int i_thread = omp_get_thread_num();
-    rng.engine().jump(2 * (i_thread / rng.n_threads()));
     trng::uniform01_dist<double> dist;
-    double u = dist(rng.engine());
+    double u = dist(rng.thread_engines().at(i_thread));
     return u;
 }
 
 double rpois(double mean) {
-    ClaimsBootRng& rng = ClaimsBootRng::get();
+    TrnglRng& rng = TrnglRng::get();
     int i_thread = omp_get_thread_num();
-    rng.engine().jump(2 * (i_thread / rng.n_threads()));
     trng::uniform01_dist<double> dist;
-    double u = dist(rng.engine());
-    return R::qpois(u, mean, true, false);
+    double u = dist(rng.thread_engines().at(i_thread));
+    boost::math::poisson_distribution poisson(mean);
+    return boost::math::quantile(poisson, u);
 }
