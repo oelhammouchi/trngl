@@ -7,7 +7,6 @@
 # * https://testthat.r-lib.org/reference/test_package.html#special-files
 
 library(testthat)
-library(claimsBoot)
-library(future)
+library(trngl)
 
-test_check("claimsBoot")
+test_check("trngl")
