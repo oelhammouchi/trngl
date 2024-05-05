@@ -1,0 +1,62 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# trngl
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+trngl provides simulation-based tools for checking the assumptions of actuarial reserving models.
+
+## Installation
+
+
+``` r
+install.packages("trngl")
+
+# To get the development version from GitHub:
+# install.packages("remotes")
+remotes::install_github("oelhammouchi/trngl@develop")
+```
+
+## Example
+
+Flag a suspicious point:
+
+```{r flag}
+library(trngl)
+
+triangle <- cum2incr(UKMotor)
+triangle[1, 4] <- 10 * triangle[1, 4]
+triangle <- incr2cum(triangle)
+res <- odpResidSim(triangle, "single",
+  n_boot = 1e2,
+  n_sim = 1e2,
+  progress = FALSE
+)
+print(triangle)
+```
+
+Visualise the simulation result, either by plotting...
+
+```{r plot}
+plot(res)
+```
+
+... or with a summary
+
+```{r print.odp()}
+print(res)
+```
