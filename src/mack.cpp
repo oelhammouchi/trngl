@@ -144,11 +144,11 @@ Rcpp::List mackSim(arma::mat triangle, options::SimType sim_type, int n_boot,
     Rcpp::List res;
     res["n_boot"] = n_boot;
     res["n_sim"] = n_sim;
-    Rcpp::List col_mapping;
+    std::map<int, Rcpp::IntegerVector> col_mapping_;
 
     Progress* pgb;
     CliProgressBar* pb;
-    int n_threads = ClaimsBootConfig::get().n_threads();
+    int n_threads = TrnglRng::get().n_threads();
     switch (sim_type) {
         case options::SINGLE: {
             if (progress) {
@@ -164,7 +164,7 @@ Rcpp::List mackSim(arma::mat triangle, options::SimType sim_type, int n_boot,
 
             // clang-format off
             #pragma omp parallel for num_threads(n_threads) collapse(2) default(firstprivate) \
-                shared(reserves, col_idx, col_mapping, pgb, std::cout)
+                shared(reserves, col_idx, col_mapping_, pgb)
             // clang-format on
             for (int i = 0; i < n_dev; i++) {
                 for (int j = 1; j < n_dev - i; j++) {
@@ -188,8 +188,8 @@ Rcpp::List mackSim(arma::mat triangle, options::SimType sim_type, int n_boot,
                     #pragma omp critical
                     // clang-format on
                     {
-                        col_mapping.push_back(
-                            Rcpp::IntegerVector{i + 1, j + 1});
+                        col_mapping_.insert(
+                            {k, Rcpp::IntegerVector{i + 1, j + 1}});
                     }
 
                     if (abort_check) {
@@ -226,7 +226,7 @@ Rcpp::List mackSim(arma::mat triangle, options::SimType sim_type, int n_boot,
                     }
                 }
             }
-            res.attr("class") = "mack.single";
+            res.attr("class") = Rcpp::CharacterVector{"single", "mack"};
             break;
         }
         case options::CALENDAR: {
@@ -242,7 +242,7 @@ Rcpp::List mackSim(arma::mat triangle, options::SimType sim_type, int n_boot,
 
             // clang-format off
             #pragma omp parallel for num_threads(n_threads) default(firstprivate) \
-                 shared(reserves, pgb, col_mapping)
+                 shared(reserves, pgb, col_mapping_)
             // clang-format on
             for (int i_diag = 0; i_diag < n_dev; i_diag++) {
                 bool abort_check;
@@ -255,7 +255,10 @@ Rcpp::List mackSim(arma::mat triangle, options::SimType sim_type, int n_boot,
                 // clang-format off
                 #pragma omp critical
                 // clang-format on
-                { col_mapping.push_back(i_diag + 1); }
+                {
+                    col_mapping_.insert(
+                        {i_diag, Rcpp::IntegerVector{i_diag + 1}});
+                }
 
                 if (abort_check) {
                     Mask mask_in = mask;
@@ -292,7 +295,7 @@ Rcpp::List mackSim(arma::mat triangle, options::SimType sim_type, int n_boot,
                     }
                 }
             }
-            res.attr("class") = "mack.calendar";
+            res.attr("class") = Rcpp::CharacterVector{"calendar", "mack"};
             break;
         }
         case options::ORIGIN: {
@@ -307,7 +310,7 @@ Rcpp::List mackSim(arma::mat triangle, options::SimType sim_type, int n_boot,
             reserves = arma::mat(n_boot * n_sim, n_dev);
             // clang-format off
             #pragma omp parallel for num_threads(n_threads) default(firstprivate) \
-                shared(reserves, pgb, col_mapping)
+                shared(reserves, pgb, col_mapping_)
             // clang-format on
             for (int i = 0; i < n_dev; i++) {
                 bool abort_check;
@@ -320,7 +323,7 @@ Rcpp::List mackSim(arma::mat triangle, options::SimType sim_type, int n_boot,
                 // clang-format off
                 #pragma omp critical
                 // clang-format on
-                { col_mapping.push_back(i + 1); }
+                { col_mapping_.insert({i, Rcpp::IntegerVector{i + 1}}); }
 
                 if (abort_check) {
                     Mask mask_in = mask;
@@ -353,7 +356,7 @@ Rcpp::List mackSim(arma::mat triangle, options::SimType sim_type, int n_boot,
                     }
                 }
             }
-            res.attr("class") = "mack.origin";
+            res.attr("class") = Rcpp::CharacterVector{"origin", "mack"};
             break;
         }
     }
@@ -366,6 +369,12 @@ Rcpp::List mackSim(arma::mat triangle, options::SimType sim_type, int n_boot,
     // Assigning to list drops the 'class' attribute for some reason
     Rcpp::CharacterVector res_class = res.attr("class");
     res["reserves"] = reserves;
+
+    int n = col_mapping_.size();
+    Rcpp::List col_mapping(n);
+    for (int i = 0; i < n; i++) {
+        col_mapping[i] = col_mapping_.at(i);
+    }
     res["col_mapping"] = col_mapping;
     res.attr("class") = res_class;
 
