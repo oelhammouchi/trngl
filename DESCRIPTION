@@ -1,4 +1,4 @@
-Package: claimsBoot
+Package: trngl
 Type: Package
 Title: Bootstrap Simulations for Claims Reserving
 Version: 1.0
@@ -40,4 +40,5 @@ Collate:
     'klDivergence.R'
     'mack.R'
     'odp.R'
-    'zzz.R'
+    'trngl-package.R'
+    'utils.R'

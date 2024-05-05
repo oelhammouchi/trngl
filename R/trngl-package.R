@@ -1,12 +1,12 @@
-#' claimsBoot
+#' trngl
 #'
 #' Bootstrap simulation for actuarial reserving models.
 #'
 #' @docType package
 #' @author Othman El Hammouchi <othman.el.hammouchi@protonmail.com>
 #' @importFrom rTRNG TRNG.Version
-#' @useDynLib claimsBoot
-#' @name claimsBoot
+#' @useDynLib trngl
+#' @name trngl
 #' @keywords internal
 "_PACKAGE"
 
