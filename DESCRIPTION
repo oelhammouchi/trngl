@@ -1,13 +1,14 @@
 Package: trngl
 Type: Package
-Title: Bootstrap Simulations for Claims Reserving
+Title: Bootstrap Simulations for Claims Reserving Models
 Version: 0.1.0
 Date: 2023-02-08
-Author: Othman El Hammouchi
-Maintainer: Othman El Hammouchi <othman.el.hammouchi@protonmail.com>
-Description: This package provides simulation-based checks for the 
-    assumptions of the Mack and ODP actuarial reserving models. The bootstrap
-    simulations are implemented efficiently using the OpenMP parllelism library.
+Authors@R: c(
+    person("Othman", "El Hammouchi", , "othman.el.hammouchi@protonmail.com", role = c("aut", "cph", "cre"))
+  )
+Description: Check the assumptions of popular actuarial reserving models against a given claims triangle using
+    efficient parallel bootstrap simulations. Various simulation configurations are supported for the Mack and ODP models. 
+    Facilities are provided for visualising the results and flagging suspicious observations.
 License: MIT + file LICENSE
 Depends: R (>= 3.5.0)
 Imports: 
@@ -30,7 +31,7 @@ Suggests:
 LazyData: true
 Encoding: UTF-8
 RoxygenNote: 7.2.3
-Roxygen: list(load = "source", old_usage = TRUE)
+Roxygen: list(load = "source", old_usage = TRUE, markdown = TRUE)
 NeedsCompilation: yes
 Packaged: 2023-02-26 18:07:38 UTC; othman
 Config/testthat/edition: 3
