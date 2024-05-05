@@ -34,21 +34,6 @@ module mod_odp_triangle
   end type t_glm_res
 
 contains
-  subroutine print_array(X)
-    real(c_double), intent(in) :: X(:, :)
-
-    integer :: i, j, n, m
-
-    n = size(X, 1)
-    m = size(X, 2)
-    do i = 1, n
-      do j = 1, m
-        write (*, "(es11.3)", advance="no") X(i, j)
-      end do
-      print*
-    end do
-  end subroutine print_array
-
   subroutine init_glm_res(this, n_dev)
     integer(c_int) :: n_dev
     class(t_glm_res) :: this

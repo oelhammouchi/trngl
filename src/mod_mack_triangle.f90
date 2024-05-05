@@ -220,8 +220,7 @@ contains
     deallocate (idxs)
   end subroutine resample_sim
 
-
-    !> @brief Compute chain ladder development factors and sigmas.
+  !> @brief Compute chain ladder development factors and sigmas.
     !! @param triangle Cumulative claims triangle.
     !! @param use_mask[in] Bool indicating whether the triangle's mask should be used
     !! to exclude certain observations from the fit.

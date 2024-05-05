@@ -21,10 +21,9 @@ contains
     real(c_double) :: reserve(n_boot * n_sim)
     real(c_double) :: X_pred(trngl%n_pred, trngl%n_cov), y_pred(trngl%n_pred), y_sim(trngl%n_pred)
     real(c_double) :: triangle_boot(trngl%n_dev, trngl%n_dev)
-    real(c_double) :: triangle_pred(trngl%n_dev, trngl%n_dev)
 
     real(c_double) :: lambda, mean, sd, shape, scale
-    integer(c_int) :: i, j, k, i_boot, i_sim, l
+    integer(c_int) :: i, j, k, i_boot, i_sim
     logical :: show_progress
 
     show_progress = c_associated(pgb)
@@ -84,11 +83,7 @@ contains
           else if (dist == GAMMA) then
             shape = y_pred(i)**2 / (trngl%disp_boot * y_pred(i))
             scale = (trngl%disp_boot * y_pred(i)) / y_pred(i)
-
             y_sim(i) = rgamma(shape, scale)
-            if (y_sim(i) < 0) then
-              cycle main_loop
-            end if
 
           else if (dist == POISSON) then
             lambda = y_pred(i) / trngl%disp_boot
@@ -224,20 +219,5 @@ contains
     call trngl%init(triangle, logical(mask))
     reserve = odp_resid_boot(trngl, n_boot, n_sim, pgb, status)
   end subroutine odp_resid_boot_cpp
-
-  subroutine glm_fit_test_cpp(n_dev, triangle, betas, disp) bind(c)
-    integer(c_int), value, intent(in) :: n_dev
-    real(c_double), intent(in) :: triangle(n_dev, n_dev)
-    real(c_double), intent(out) :: betas(2 * n_dev - 1)
-    real(c_double), intent(out) :: disp
-
-    type(t_odp_triangle) :: trngl
-    integer :: status
-
-    call trngl%init(triangle)
-    call trngl%fit_glm(use_mask=.false., status=status)
-    betas = trngl%betas
-    disp = trngl%disp
-  end subroutine glm_fit_test_cpp
 
 end module mod_odp
