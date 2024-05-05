@@ -1,3 +1,4 @@
+#' @importFrom stats approxfun density integrate quantile
 klDivergence <- function(x, y) {
   p <- approxfun(density(x), rule = 2)
   q <- approxfun(density(y), rule = 2)
@@ -12,7 +13,7 @@ klDivergence <- function(x, y) {
     )$value,
     silent = TRUE
   )
-  if (class(res) == "try-error") {
+  if (inherits(res, "try-error")) {
     if (attr(res, "condition")$message == "non-finite function value") {
       return(Inf)
     }
