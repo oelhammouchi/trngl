@@ -46,18 +46,18 @@ cumCheck <- function(triangle) {
 #'
 #' @param triangle A *cumulative* claims triangle
 #' @export
-as.trngl <- function(triangle, ...) {
+as.trngl <- function(triangle) {
   UseMethod("as.trngl")
 }
 
 #' @export
-as.trngl.trngl <- function(triangle, ...) {
+as.trngl.trngl <- function(triangle) {
   attr(triangle, "outliers") <- list()
   return(triangle)
 }
 
 #' @export
-as.trngl.matrix <- function(triangle, ...) {
+as.trngl.matrix <- function(triangle) {
   if (!(nrow(triangle) == ncol(triangle))) {
     cli::cli_abort(c(
       "{.var triangle} must square.",
