@@ -22,6 +22,17 @@ print.odp <- function(x, ...) {
 #' @param n_sim Number of simulation iterations
 #' @param progress Whether to show progress
 #' @name odp
+#' @examples
+#' res <- odpParamSim(UKMotor, "single",
+#'   dist = "normal",
+#'   n_boot = 1e2,
+#'   n_sim = 1e2,
+#'   progress = FALSE
+#' )
+#' print(res)
+#' @return An object of class 'odp' containing the simulation results. There are S3 methods
+#' for printing and plotting it. The object also inherits from a class depending on the value
+#' of `sim_type`.
 NULL
 
 #' @rdname odp

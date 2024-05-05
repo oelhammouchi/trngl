@@ -43,19 +43,41 @@ cumCheck <- function(triangle) {
 
 #' Coerce to trngl
 #'
-#'
+#' `as.trngl` is an S3 generic with methods for matrix and trngl itself.
+#' The latter clears the outliers which are currently flagged.
 #' @param triangle A *cumulative* claims triangle
+#'
+#' @name as.trngl
+#' @return A trngl
 #' @export
 as.trngl <- function(triangle) {
   UseMethod("as.trngl")
 }
 
+#' @rdname as.trngl
+#' @examples
+#' triangle <- UKMotor
+#' triangle[1, 7] <- 10 * triangle[1, 7]
+#' res <- mackParamSim(triangle, "single",
+#'   cond = TRUE,
+#'   dist = "normal",
+#'   n_boot = 1e2,
+#'   n_sim = 1e2,
+#'   progress = FALSE
+#' )
+#' print(triangle)
+#' triangle <- as.trngl(triangle)
+#' print(triangle) # no outliers marked
 #' @export
 as.trngl.trngl <- function(triangle) {
   attr(triangle, "outliers") <- list()
   return(triangle)
 }
 
+#' @rdname as.trngl
+#' @examples
+#' raw.triangle <- unclass(UKMotor)
+#' as.trngl(raw.triangle)
 #' @export
 as.trngl.matrix <- function(triangle) {
   if (!(nrow(triangle) == ncol(triangle))) {
@@ -99,12 +121,19 @@ format.trngl <- function(x, ...) {
 #' @export
 print.trngl <- function(x, ...) cat(format(x, ...), "\n")
 
+#' Convert between representations of claims triangles
+#'
+#' @param trngl For `cum2incr` a cumulative claims triangle, for `incr2cum` an incremental one.
+#'
+#' @examples
+#' UKMotor.incr <- cum2incr(UKMotor)
+#' all.equal(UKMotor, incr2cum(UKMotor.incr))
+#' @name convert
+#' @return `cum2incr` returns the cumulative representation of a cumulative claims triangle.
+#' Vice versa for `incr2cum`.
+NULL
 
-#' Convert cumulative triangle to incremental one.
-#'
-#' @param trngl Cumulative claims triangle.
-#'
-#' @return Incremental claims triangle.
+#' @rdname convert
 #' @export
 cum2incr <- function(trngl) {
   class(trngl) <- setdiff(class(trngl), "trngl")
@@ -119,11 +148,7 @@ cum2incr <- function(trngl) {
   return(trngl)
 }
 
-#' Convert incremental triangle to cumulative one.
-#'
-#' @param trngl Incremental claims triangle.
-#'
-#' @return Cumulative claims triangle.
+#' @rdname convert
 #' @export
 incr2cum <- function(trngl) {
   ndev <- ncol(trngl)
