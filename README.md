@@ -4,6 +4,10 @@
 # trngl
 
 <!-- badges: start -->
+
+[![Codecov test
+coverage](https://codecov.io/gh/oelhammouchi/trngl/branch/master/graph/badge.svg)](https://app.codecov.io/gh/oelhammouchi/trngl?branch=master)
+[![R-CMD-check](https://github.com/oelhammouchi/trngl/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/oelhammouchi/trngl/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 trngl provides simulation-based tools for checking the assumptions of

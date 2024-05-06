@@ -1,0 +1,12 @@
+data-raw
+scripts
+Doxyfile
+Makefile
+.clang-format
+.fonts
+.vscode
+^LICENSE\.md$
+^cran-comments\.md$
+^README\.Rmd$
+^\.github$
+^codecov\.yml$
