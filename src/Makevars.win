@@ -1,0 +1,13 @@
+CXX_STD = CXX17
+
+PKG_CPPFLAGS = -I../inst/include/
+PKG_FFLAGS = $(SHLIB_OPENMP_FFLAGS)
+PKG_CXXLAGS = $(SHLIB_OPENMP_CXXFLAGS)
+PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS) `"$(R_HOME)/bin$(R_ARCH_BIN)/Rscript" -e 'rTRNG::LdFlags()'`
+
+all: $(SHLIB)
+
+mod_mack_triangle.o: mod_random.o
+mod_mack.o: mod_mack_triangle.o mod_pgb.o mod_random.o mod_config.o
+mod_odp.o: mod_odp_triangle.o mod_pgb.o mod_random.o mod_config.o
+mod_thesis.o: mod_mack_triangle.o mod_mack.o mod_odp_triangle.o mod_odp.o
