@@ -9,8 +9,11 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   fig.path = "man/figures/README-",
-  out.width = "100%"
+  out.width = "100%",
+  asciicast_theme = "readme"
 )
+
+asciicast::init_knitr_engine()
 ```
 
 # trngl
@@ -35,28 +38,49 @@ remotes::install_github("oelhammouchi/trngl@develop")
 
 Flag a suspicious point:
 
-```{r flag}
+```{asciicast}
+#' End_wait: 5
+#' At: all
+
 library(trngl)
 
 triangle <- cum2incr(UKMotor)
 triangle[1, 4] <- 10 * triangle[1, 4]
 triangle <- incr2cum(triangle)
-res <- odpResidSim(triangle, "single",
+res <- odpParamSim(triangle, "single",
+  dist = "gamma",
+  n_boot = 1e2,
+  n_sim = 1e2,
+  progress = TRUE
+)
+
+print(triangle)
+```
+
+Inspect the simulation results:
+
+```{asciicast}
+#' End_wait: 5
+#' At: all
+
+print(res)
+```
+
+```{r include=FALSE, echo=FALSE}
+library(trngl)
+
+triangle <- cum2incr(UKMotor)
+triangle[1, 4] <- 10 * triangle[1, 4]
+triangle <- incr2cum(triangle)
+res <- odpParamSim(triangle, "single",
+  dist = "gamma",
   n_boot = 1e2,
   n_sim = 1e2,
   progress = FALSE
 )
-print(triangle)
 ```
 
-Visualise the simulation result, either by plotting...
-
-```{r plot}
+```{r plot, dpi=300}
 plot(res)
 ```
 
-... or with a summary
-
-```{r print.odp()}
-print(res)
-```
