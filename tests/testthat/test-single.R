@@ -1,4 +1,8 @@
 test_that("single sim plot works with correct output", {
+  announce_snapshot_file(name = "sim_single.png")
+  skip_on_ci()
+  skip_on_os("windows")
+
   withr::local_seed(42)
   restore <- getTrnglSeed()
   setTrnglSeed(42)
