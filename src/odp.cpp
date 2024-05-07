@@ -117,8 +117,10 @@ Rcpp::List odpSim(arma::mat triangle, options::SimType sim_type, int n_boot,
             int col_idx = 0;
 
             // clang-format off
-            #pragma omp parallel for num_threads(n_threads) collapse(2) default(firstprivate) \
-                shared(reserves, col_idx, col_mapping_, pgb)
+            #pragma omp parallel for num_threads(n_threads) collapse(2) default(none) \
+                shared(reserves, col_idx, col_mapping_, pgb) \
+                firstprivate(boot_type, mask, triangle, n_boot, n_sim, n_dev) \
+                firstprivate(dist_type, progress)
             // clang-format on
             for (int i = 0; i < n_dev; i++) {
                 for (int j = 0; j < n_dev - i; j++) {
@@ -191,8 +193,10 @@ Rcpp::List odpSim(arma::mat triangle, options::SimType sim_type, int n_boot,
             reserves = arma::mat(n_boot * n_sim, n_dev);
 
             // clang-format off
-            #pragma omp parallel for num_threads(n_threads) default(firstprivate) \
-                shared(reserves, pgb, col_mapping_)
+            #pragma omp parallel for num_threads(n_threads) default(none) \
+                shared(reserves, pgb, col_mapping_) \
+                firstprivate(boot_type, mask, triangle, n_boot, n_sim, n_dev) \
+                firstprivate(dist_type, progress)
             // clang-format on
             for (int i_diag = 0; i_diag < n_dev; i_diag++) {
                 bool abort_check;
@@ -252,8 +256,10 @@ Rcpp::List odpSim(arma::mat triangle, options::SimType sim_type, int n_boot,
 
             reserves = arma::mat(n_boot * n_sim, n_dev - 1);
             // clang-format off
-            #pragma omp parallel for num_threads(n_threads) default(firstprivate) \
-                shared(reserves, pgb, col_mapping_)
+            #pragma omp parallel for num_threads(n_threads) default(none) \
+                shared(reserves, pgb, col_mapping_) \
+                firstprivate(boot_type, mask, triangle, n_boot, n_sim, n_dev) \
+                firstprivate(dist_type, progress)
             // clang-format on
             for (int i = 0; i < n_dev - 1; i++) {
                 bool abort_check;
