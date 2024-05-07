@@ -1,5 +1,5 @@
 #include <RcppArmadillo.h>
-#include <omp.h>
+#include "config.h"
 
 #include <cmath>
 #include <progress.hpp>

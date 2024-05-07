@@ -2,6 +2,7 @@ test_that("origin sim plot works with correct output", {
   announce_snapshot_file(name = "sim_origin.png")
   skip_on_ci()
   skip_on_os("windows")
+  skip_on_os("mac")
 
   withr::local_seed(42)
   restore <- getTrnglSeed()

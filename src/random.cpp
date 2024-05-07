@@ -1,13 +1,13 @@
 #include "random.h"
 
 #include <Rcpp.h>
-#include <omp.h>
-
 #include <boost/math/distributions/poisson.hpp>
 #include <trng/gamma_dist.hpp>
 #include <trng/normal_dist.hpp>
 #include <trng/poisson_dist.hpp>
 #include <trng/uniform01_dist.hpp>
+
+#include "config.h"
 
 extern "C" {
 double rnorm(double mean, double sd);

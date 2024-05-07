@@ -174,6 +174,8 @@ Rcpp::List odpSim(arma::mat triangle, options::SimType sim_type, int n_boot,
                                                reserves.colptr(k), pgb);
                                 break;
                             }
+                            case options::PAIRS:
+                                break;
                         }
                     }
                 }
@@ -239,6 +241,8 @@ Rcpp::List odpSim(arma::mat triangle, options::SimType sim_type, int n_boot,
                                            reserves.colptr(i_diag), pgb);
                             break;
                         }
+                        case options::PAIRS:
+                            break;
                     }
                 }
             }
@@ -295,6 +299,8 @@ Rcpp::List odpSim(arma::mat triangle, options::SimType sim_type, int n_boot,
                                            reserves.colptr(i), pgb);
                             break;
                         }
+                        case options::PAIRS:
+                            break;
                     }
                 }
             }

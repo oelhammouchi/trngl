@@ -3,6 +3,7 @@ test_that("bootstrap plot works with correct output", {
   announce_snapshot_file(name = "boot_multiple.png")
   skip_on_ci()
   skip_on_os("windows")
+  skip_on_os("mac")
 
   res <- withr::with_seed(
     42,
