@@ -7,7 +7,7 @@ PKG_LIBS = $(LAPACK_LIBS) $(SHLIB_OPENMP_CXXFLAGS) `"$(R_HOME)/bin$(R_ARCH_BIN)/
 
 all: $(SHLIB)
 
-mod_mack_triangle.o: mod_random.o
+mod_mack_triangle.o: mod_random.o mod_config.o
 mod_mack.o: mod_mack_triangle.o mod_pgb.o mod_random.o mod_config.o
 mod_odp.o: mod_odp_triangle.o mod_pgb.o mod_random.o mod_config.o
 mod_thesis.o: mod_mack_triangle.o mod_mack.o mod_odp_triangle.o mod_odp.o
