@@ -246,7 +246,7 @@ contains
     type(c_ptr), intent(in), value :: pgb
 
     real(c_double) :: reserve(n_boot * n_sim)
-    integer :: i, j, k, i_diag, i_boot, i_sim, i_thread, n_rows, n_obs
+    integer :: i, j, k, i_diag, i_boot, i_sim, n_rows, n_obs
     real(c_double) :: mean, sd
     real(c_double) :: triangle_sim(trngl%n_dev, trngl%n_dev)
     integer :: status
@@ -256,7 +256,6 @@ contains
     logical :: show_progress
 
     show_progress = c_associated(pgb)
-    i_thread = omp_get_thread_num()
 
     i_boot = 1
     main_loop: do while (i_boot <= n_boot)
