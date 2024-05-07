@@ -1,8 +1,8 @@
 #pragma once
 #include <Rcpp.h>
-#include <omp.h>
-
 #include <trng/yarn2.hpp>
+
+#include "config.h"
 
 /**
  * @brief Singleton class managing a parallel RNG engine for
