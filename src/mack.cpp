@@ -23,7 +23,6 @@ void mack_pairs_boot_cpp(int n_dev, double* triangle, int n_boot, int n_sim,
                          bool* mask, double* reserve, void* pgb);
 }
 
-//' @export
 // [[Rcpp::export(.mackParamBoot)]]
 Rcpp::List mackParamBoot(Rcpp::NumericMatrix trngl, Rcpp::String dist,
                          bool cond, int n_boot = 1e3, int n_sim = 1e3,
@@ -60,7 +59,6 @@ Rcpp::List mackParamBoot(Rcpp::NumericMatrix trngl, Rcpp::String dist,
     return res;
 };
 
-//' @export
 // [[Rcpp::export(.mackResidBoot)]]
 Rcpp::List mackResidBoot(Rcpp::NumericMatrix trngl, Rcpp::String resid_type,
                          bool cond, int n_boot = 1e3, int n_sim = 1e3,
@@ -96,7 +94,6 @@ Rcpp::List mackResidBoot(Rcpp::NumericMatrix trngl, Rcpp::String resid_type,
     return res;
 };
 
-//' @export
 // [[Rcpp::export(.mackPairsBoot)]]
 Rcpp::List mackPairsBoot(Rcpp::NumericMatrix trngl, int n_boot = 1e3,
                          int n_sim = 1e3, bool progress = true) {
@@ -387,7 +384,6 @@ Rcpp::List mackSim(arma::mat triangle, options::SimType sim_type, int n_boot,
     return res;
 };
 
-//' @export
 // [[Rcpp::export(.mackPairsSim)]]
 Rcpp::List mackPairsSim(Rcpp::NumericMatrix trngl, Rcpp::String sim_type,
                         int n_boot, int n_sim, bool progress) {
@@ -397,7 +393,6 @@ Rcpp::List mackPairsSim(Rcpp::NumericMatrix trngl, Rcpp::String sim_type,
                    options::Dist::NORMAL, options::STANDARD);
 }
 
-//' @export
 // [[Rcpp::export(.mackParamSim)]]
 Rcpp::List mackParamSim(Rcpp::NumericMatrix trngl, Rcpp::String sim_type,
                         bool cond, Rcpp::String dist, int n_boot, int n_sim,
@@ -408,7 +403,6 @@ Rcpp::List mackParamSim(Rcpp::NumericMatrix trngl, Rcpp::String sim_type,
                    options::dist_mapping.at(dist), options::STANDARD);
 }
 
-//' @export
 // [[Rcpp::export(.mackResidSim)]]
 Rcpp::List mackResidSim(Rcpp::NumericMatrix trngl, Rcpp::String sim_type,
                         bool cond, Rcpp::String resid_type, int n_boot,
