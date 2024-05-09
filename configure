@@ -1,0 +1,42 @@
+#!/usr/bin/env sh
+
+cat <<EOF > test-f03.f90
+module mod_test
+  implicit none
+
+  type t_test
+    integer :: test_field
+
+  contains
+    procedure :: set_test_field
+  end type t_test
+
+contains
+  subroutine set_test_field(this, val)
+    class(t_test) :: this
+    integer :: val
+    this%test_field = val
+  end subroutine set_test_field
+end module mod_test
+
+program test
+  use mod_test
+  implicit none
+
+  type(t_test) :: test_var
+
+  call test_var%set_test_field(0)
+end program test
+EOF
+
+if ! "${R_HOME}"/bin/R CMD SHLIB test-f03.f90; then
+    echo "*********************************************************************************"
+    echo "Your Fortran compiler does not appear to support all features of the 2003"
+    echo "standard. Please install a compatible compiler, set this in your ~/.R/Makevars"
+    echo "and try again."
+    echo "*********************************************************************************"
+
+    exit 1
+fi
+
+rm -f test-f03.* mod_test.*
