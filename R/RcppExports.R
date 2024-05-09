@@ -32,32 +32,26 @@ getTrnglSeed <- function() {
     .Call('_trngl_getTrnglSeed', PACKAGE = 'trngl')
 }
 
-#' @export
 .mackParamBoot <- function(trngl, dist, cond, n_boot = 1e3L, n_sim = 1e3L, progress = TRUE) {
     .Call('_trngl_mackParamBoot', PACKAGE = 'trngl', trngl, dist, cond, n_boot, n_sim, progress)
 }
 
-#' @export
 .mackResidBoot <- function(trngl, resid_type, cond, n_boot = 1e3L, n_sim = 1e3L, progress = TRUE) {
     .Call('_trngl_mackResidBoot', PACKAGE = 'trngl', trngl, resid_type, cond, n_boot, n_sim, progress)
 }
 
-#' @export
 .mackPairsBoot <- function(trngl, n_boot = 1e3L, n_sim = 1e3L, progress = TRUE) {
     .Call('_trngl_mackPairsBoot', PACKAGE = 'trngl', trngl, n_boot, n_sim, progress)
 }
 
-#' @export
 .mackPairsSim <- function(trngl, sim_type, n_boot, n_sim, progress) {
     .Call('_trngl_mackPairsSim', PACKAGE = 'trngl', trngl, sim_type, n_boot, n_sim, progress)
 }
 
-#' @export
 .mackParamSim <- function(trngl, sim_type, cond, dist, n_boot, n_sim, progress) {
     .Call('_trngl_mackParamSim', PACKAGE = 'trngl', trngl, sim_type, cond, dist, n_boot, n_sim, progress)
 }
 
-#' @export
 .mackResidSim <- function(trngl, sim_type, cond, resid_type, n_boot, n_sim, progress) {
     .Call('_trngl_mackResidSim', PACKAGE = 'trngl', trngl, sim_type, cond, resid_type, n_boot, n_sim, progress)
 }
