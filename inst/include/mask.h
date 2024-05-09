@@ -6,6 +6,7 @@ class Mask {
     Mask(int n_row, int n_col) : n_row_(n_row), n_col_(n_col) {
         data_ = new bool[n_row * n_col];
 
+        // column major
         for (int i = 0; i < n_row; i++) {
             for (int j = 0; j < n_col; j++) {
                 if (j >= n_col - i) {
@@ -16,15 +17,17 @@ class Mask {
             }
         }
     };
+
     Mask(int n_dev) : Mask(n_dev, n_dev){};
     ~Mask() { delete[] data_; }
 
     bool* begin() { return data_; }
-    int n_row() { return n_row_; }
-    int n_col() { return n_col_; }
-    int size() { return n_row_ * n_col_; }
+    int n_row() const { return n_row_; }
+    int n_col() const { return n_col_; }
+    int size() const { return n_row_ * n_col_; }
 
     bool& operator()(int i, int j) { return data_[i + j * n_row_]; }
+    bool get(int i, int j) const { return data_[i + j * n_row_]; }
 
     class RowProxy {
        public:
@@ -70,10 +73,10 @@ class Mask {
         }
     }
 
-    friend std::ostream& operator<<(std::ostream& os, Mask& mask) {
+    friend std::ostream& operator<<(std::ostream& os, const Mask& mask) {
         for (int i = 0; i < mask.n_row(); i++) {
             for (int j = 0; j < mask.n_col(); j++) {
-                os << (mask(i, j) ? "T" : "F") << " ";
+                os << (mask.get(i, j) ? "T" : "F") << " ";
             }
             os << std::endl;
         }
