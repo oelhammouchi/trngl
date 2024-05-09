@@ -302,20 +302,20 @@ Rcpp::List mackSim(arma::mat triangle, options::SimType sim_type, int n_boot,
         case options::ORIGIN: {
             if (progress) {
                 pb = new CliProgressBar;
-                pgb = new Progress(n_dev * n_boot * n_sim, true, *pb);
+                pgb = new Progress((n_dev - 1) * n_boot * n_sim, true, *pb);
             } else {
                 pb = nullptr;
                 pgb = nullptr;
             }
 
-            reserves = arma::mat(n_boot * n_sim, n_dev);
+            reserves = arma::mat(n_boot * n_sim, n_dev - 1);
             // clang-format off
             #pragma omp parallel for num_threads(n_threads) default(none) \
                 shared(reserves, pgb, col_mapping_) \
                 firstprivate(boot_type, mask, triangle, n_boot, n_sim, n_dev) \
                 firstprivate(dist_type, resid_type, cond, progress)
             // clang-format on
-            for (int i = 0; i < n_dev; i++) {
+            for (int i = 0; i < n_dev - 1; i++) {
                 bool abort_check;
                 if (progress) {
                     abort_check = !Progress::check_abort();
@@ -332,6 +332,7 @@ Rcpp::List mackSim(arma::mat triangle, options::SimType sim_type, int n_boot,
                     Mask mask_in = mask;
                     mask_in.row(i) = false;
                     mask_in(i, 0) = true;
+
                     if (boot_type == options::PAIRS ||
                         boot_type == options::PARAM)
                         mask_in(0, n_dev - 1) = true;
