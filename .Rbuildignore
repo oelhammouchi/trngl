@@ -10,3 +10,4 @@ Makefile
 ^README\.Rmd$
 ^\.github$
 ^codecov\.yml$
+^CRAN-SUBMISSION$
