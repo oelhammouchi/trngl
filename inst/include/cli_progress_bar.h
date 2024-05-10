@@ -3,10 +3,6 @@
 
 #include <progress_bar.hpp>
 
-#if !defined(WIN32) && !defined(__WIN32) && !defined(__WIN32__)
-    #include <Rinterface.h>
-#endif
-
 class CliProgressBar : public ProgressBar {
    public:
     CliProgressBar() { reset(); }
@@ -14,7 +10,7 @@ class CliProgressBar : public ProgressBar {
     ~CliProgressBar() {}
 
    public:
-    void display() { Rprintf("\033[37mRunning simulations "); }
+    void display() { Rcpp::Rcout << "\033[37mRunning simulations "; }
 
     void update(float progress) {
         _update_ticks_display(progress);
@@ -42,7 +38,7 @@ class CliProgressBar : public ProgressBar {
         int nb_ticks = _compute_nb_ticks(progress);
         int delta = nb_ticks - _ticks_displayed;
         if (delta > 0) {
-            Rprintf("\r");
+            Rcpp::Rcout << "\r" << std::flush;
             _ticks_displayed = nb_ticks;
             _display_ticks(progress);
         }
@@ -51,31 +47,21 @@ class CliProgressBar : public ProgressBar {
     void _finalize_display() {
         if (_finalized) return;
 
-        Rprintf("\n");
-        flush_console();
+        Rcpp::Rcout << std::endl;
         _finalized = true;
     }
 
     int _compute_nb_ticks(float progress) { return int(progress * _max_ticks); }
 
     void _display_ticks(double progress) {
-        Rprintf("\033[37mRunning simulations ");
+        Rcpp::Rcout << "\033[37mRunning simulations ";
         for (int i = 0; i < _ticks_displayed; ++i) {
-            Rprintf("\033[32m\u25A0");
-            R_FlushConsole();
+            Rcpp::Rcout << "\033[32m\u25A0" << std::flush;
         }
         for (int i = 0; i < (_max_ticks - _ticks_displayed); i++) {
-            Rprintf(" ");
-            R_FlushConsole();
+            Rcpp::Rcout << " " << std::flush;
         }
-        Rprintf("\033[37m | %d%%", int(progress * 100));
-    }
-
-    // N.B: does nothing on windows
-    void flush_console() {
-#if !defined(WIN32) && !defined(__WIN32) && !defined(__WIN32__)
-        R_FlushConsole();
-#endif
+        Rcpp::Rcout << "\033[37m | " << int(progress * 100) << "%";
     }
 
    private:
