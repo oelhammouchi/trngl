@@ -3,14 +3,15 @@
 #ifdef _OPENMP
     #include <omp.h>
 #else
-    #define omp_get_num_threads()  1
-    #define omp_get_thread_num()   0
-    #define omp_get_max_threads()  1
+    #define omp_get_num_threads() 1
+    #define omp_get_thread_num() 0
+    #define omp_get_max_threads() 1
     #define omp_get_thread_limit() 1
-    #define omp_get_num_procs()    1
+    #define omp_get_num_procs() 1
 #endif
 
 #include <Rcpp.h>
+
 #include <cmath>
 #include <cstdlib>
 #include <map>
@@ -20,29 +21,30 @@
 
 namespace options {
 
-enum SimType { SINGLE = 1, CALENDAR = 2, ORIGIN = 3 };
-enum BootType { PARAM = 1, RESID = 2, PAIRS = 3 };
-enum Dist { NORMAL = 1, GAMMA = 2, POISSON = 3 };
-enum ResidType { STANDARD = 1, STUDENT = 2, LOG_NORM = 3 };
+enum SimType { kSingle = 1, kCalendar = 2, kOrigin = 3 };
+enum BootType { kParam = 1, kResid = 2, kPairs = 3 };
+enum Dist { kNormal = 1, kGamma = 2, kPoisson = 3 };
+enum ResidType { kStandard = 1, kStudent = 2, kLogNorm = 3 };
+enum Status { kSuccess = 0, kFailure = 1 };
 
 static const std::map<Rcpp::String, Dist> dist_mapping = {
-    {Rcpp::String("normal"), NORMAL},
-    {Rcpp::String("gamma"), GAMMA},
-    {Rcpp::String("poisson"), POISSON}};
+    {Rcpp::String("normal"), kNormal},
+    {Rcpp::String("gamma"), kGamma},
+    {Rcpp::String("poisson"), kPoisson}};
 
 static const std::map<Rcpp::String, ResidType> resid_type_mapping = {
-    {Rcpp::String("log-normal"), LOG_NORM},
-    {Rcpp::String("standardised"), STANDARD},
-    {Rcpp::String("studentised"), STUDENT}};
+    {Rcpp::String("log-normal"), kLogNorm},
+    {Rcpp::String("standardised"), kStandard},
+    {Rcpp::String("studentised"), kStudent}};
 
 static const std::map<Rcpp::String, SimType> sim_type_mapping = {
-    {Rcpp::String("single"), SINGLE},
-    {Rcpp::String("origin"), ORIGIN},
-    {Rcpp::String("calendar"), CALENDAR}};
+    {Rcpp::String("single"), kSingle},
+    {Rcpp::String("origin"), kOrigin},
+    {Rcpp::String("calendar"), kCalendar}};
 
 static const std::map<Rcpp::String, BootType> boot_type_mapping = {
-    {Rcpp::String("parametric"), PARAM},
-    {Rcpp::String("residuals"), RESID},
-    {Rcpp::String("pairs"), PAIRS}};
+    {Rcpp::String("parametric"), kParam},
+    {Rcpp::String("residuals"), kResid},
+    {Rcpp::String("pairs"), kPairs}};
 
 }  // namespace options
