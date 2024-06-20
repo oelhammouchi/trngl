@@ -14,3 +14,25 @@ labelDF <- function(sim.res) {
     data.frame(label = sprintf("(%i, %i)", point[1], point[2]), x = x, y = y)
   }))
 }
+
+#' @export
+calendarPeriod <- function(triangle, index = 0) {
+  n_dev <- ncol(triangle)
+  res <- c()
+  for (i in seq_len(n_dev)) {
+    if (n_dev - i + 1 - index < 0) break
+    res <- c(res, triangle[i, n_dev - i + 1 - index])
+  }
+
+  return(res)
+}
+
+#' @export
+`calendarPeriod<-` <- function(triangle, index = 0, value) {
+  n_dev <- ncol(triangle)
+  for (i in seq_len(n_dev)) {
+    if (n_dev - i + 1 - index < 0) break
+    triangle[i, n_dev - i + 1 - index] <- value[i]
+  }
+  return(triangle)
+}
