@@ -2,6 +2,7 @@
 // Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 #include <RcppArmadillo.h>
+#include <RcppThread.h>
 #include <Rcpp.h>
 
 using namespace Rcpp;
@@ -49,6 +50,35 @@ BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     rcpp_result_gen = Rcpp::wrap(getTrnglSeed());
     return rcpp_result_gen;
+END_RCPP
+}
+// initLogger
+void initLogger();
+RcppExport SEXP _trngl_initLogger() {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    initLogger();
+    return R_NilValue;
+END_RCPP
+}
+// setLogger
+void setLogger(std::string logger);
+RcppExport SEXP _trngl_setLogger(SEXP loggerSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type logger(loggerSEXP);
+    setLogger(logger);
+    return R_NilValue;
+END_RCPP
+}
+// setLogLevel
+void setLogLevel(std::string level);
+RcppExport SEXP _trngl_setLogLevel(SEXP levelSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type level(levelSEXP);
+    setLogLevel(level);
+    return R_NilValue;
 END_RCPP
 }
 // mackParamBoot
@@ -212,6 +242,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_trngl_getTrnglThreads", (DL_FUNC) &_trngl_getTrnglThreads, 0},
     {"_trngl_setTrnglSeed", (DL_FUNC) &_trngl_setTrnglSeed, 1},
     {"_trngl_getTrnglSeed", (DL_FUNC) &_trngl_getTrnglSeed, 0},
+    {"_trngl_initLogger", (DL_FUNC) &_trngl_initLogger, 0},
+    {"_trngl_setLogger", (DL_FUNC) &_trngl_setLogger, 1},
+    {"_trngl_setLogLevel", (DL_FUNC) &_trngl_setLogLevel, 1},
     {"_trngl_mackParamBoot", (DL_FUNC) &_trngl_mackParamBoot, 6},
     {"_trngl_mackResidBoot", (DL_FUNC) &_trngl_mackResidBoot, 6},
     {"_trngl_mackPairsBoot", (DL_FUNC) &_trngl_mackPairsBoot, 4},

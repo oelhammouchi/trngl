@@ -32,6 +32,20 @@ getTrnglSeed <- function() {
     .Call('_trngl_getTrnglSeed', PACKAGE = 'trngl')
 }
 
+initLogger <- function() {
+    invisible(.Call('_trngl_initLogger', PACKAGE = 'trngl'))
+}
+
+#' @export
+setLogger <- function(logger) {
+    invisible(.Call('_trngl_setLogger', PACKAGE = 'trngl', logger))
+}
+
+#' @export
+setLogLevel <- function(level) {
+    invisible(.Call('_trngl_setLogLevel', PACKAGE = 'trngl', level))
+}
+
 .mackParamBoot <- function(trngl, dist, cond, n_boot = 1e3L, n_sim = 1e3L, progress = TRUE) {
     .Call('_trngl_mackParamBoot', PACKAGE = 'trngl', trngl, dist, cond, n_boot, n_sim, progress)
 }
