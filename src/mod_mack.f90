@@ -5,6 +5,7 @@ module mod_mack
   use mod_random
   use mod_pgb
   use mod_mack_triangle
+  use mod_logging
 
   implicit none
 
@@ -26,16 +27,16 @@ contains
     integer, intent(inout) :: status
 
     real(c_double) :: reserve(n_boot * n_sim)
-    integer :: i, j, i_diag, i_boot, i_sim, n_rows
+    integer :: i, j, i_diag, i_boot, i_sim, n_rows, n_fails, max_fails
     real(c_double) :: triangle_boot(trngl%n_dev, trngl%n_dev), triangle_sim(trngl%n_dev, trngl%n_dev)
     real(c_double) :: mean, sd, shape, scale
-    logical :: show_progress
 
-    show_progress = c_associated(pgb)
+    max_fails = 1e6
+    n_fails = 0
     call trngl%fit_cl(use_mask=.true.)
 
     i_boot = 1
-    main_loop: do while (i_boot <= n_boot)
+    main_loop: do while (i_boot <= n_boot .and. n_fails < max_fails)
       status = SUCCESS
       if (cond) then
         triangle_boot(:, 1) = trngl%triangle(:, 1)
@@ -78,7 +79,15 @@ contains
         end do
       end if
 
-      if (status == FAILURE) cycle main_loop
+      if (status == FAILURE) then
+        n_fails = n_fails + 1
+        call log_matrix(trngl%n_dev, trngl%n_dev, triangle_boot, &
+                        "Mack parametric bootstrap: bad draw in bootstrap phase."//achar(10)// &
+                        "Bootstrapped triangle:"//achar(10)//"{}"//c_null_char, &
+                        SPDLOG_LEVEL_TRACE)
+        cycle main_loop
+      end if
+
       call trngl%fit_cl_boot(triangle_boot, use_mask=.false.)
 
       do i_sim = 1, n_sim
@@ -112,13 +121,24 @@ contains
           end do
         end do sim_loop
 
-        if (status == FAILURE) cycle main_loop
+        if (status == FAILURE) then
+          n_fails = n_fails + 1
+          call log_matrix(trngl%n_dev, trngl%n_dev, triangle_boot, &
+                          "Mack parametric bootstrap: bad draw in simulation phase."//achar(10)// &
+                          "Simulated triangle:"//achar(10)//"{}"//c_null_char, &
+                          SPDLOG_LEVEL_TRACE)
+          cycle main_loop
+        else
+          call pgb_incr(pgb, 1)
+        end if
+
         reserve(n_sim * (i_boot - 1) + i_sim) = sum(triangle_sim(:, trngl%n_dev)) - sum(get_latest(triangle_sim))
       end do
 
       i_boot = i_boot + 1
-      if (show_progress) call pgb_incr(pgb, n_sim)
     end do main_loop
+
+    status = merge(FAILURE, SUCCESS, n_fails == max_fails)
   end function mack_param_boot
 
   !> @brief Perform a semiparamteric bootstrap of the Mack chain ladder model.
@@ -137,17 +157,21 @@ contains
     integer, intent(out) :: status
 
     real(c_double) :: reserve(n_boot * n_sim)
-    integer :: i, j, i_diag, i_boot, i_sim, n_rows
+    integer :: i, j, i_diag, i_boot, i_sim, n_rows, n_fails, max_fails
     real(c_double) :: triangle_boot(trngl%n_dev, trngl%n_dev), triangle_sim(trngl%n_dev, trngl%n_dev)
     real(c_double) :: mean, sd
-    logical :: show_progress
 
-    show_progress = c_associated(pgb)
+    max_fails = 1e6
+    n_fails = 0
     call trngl%fit_cl(use_mask=.false.)
     call trngl%compute_resids(type=resid_type)
 
+    call log_matrix(trngl%n_dev - 1, trngl%n_dev - 1, trngl%resids, &
+                    "Residuals:"//achar(10)//"{}"//c_null_char, SPDLOG_LEVEL_TRACE)
+
     i_boot = 1
-    main_loop: do while (i_boot <= n_boot)
+    main_loop: do while (i_boot <= n_boot .and. n_fails < max_fails)
+      call log_int(n_fails, "Number of failures: {}", SPDLOG_LEVEL_DEBUG)
       status = SUCCESS
       call trngl%resample_boot()
       if (cond) then
@@ -198,7 +222,15 @@ contains
         end do uncond_boot_loop
       end if
 
-      if (status == FAILURE) cycle main_loop
+      if (status == FAILURE) then
+        n_fails = n_fails + 1
+        call log_matrix(trngl%n_dev, trngl%n_dev, triangle_boot, &
+                        "Mack residuals bootstrap: bad draw in bootstrap phase."//achar(10)// &
+                        "Bootstrapped triangle:"//achar(10)//"{}"//c_null_char, &
+                        SPDLOG_LEVEL_TRACE)
+        cycle main_loop
+      end if
+
       call trngl%fit_cl_boot(triangle_boot, use_mask=.false.)
 
       do i_sim = 1, n_sim
@@ -227,38 +259,50 @@ contains
           end do
         end do sim_loop
 
-        if (status == FAILURE) cycle main_loop
+        if (status == FAILURE) then
+          n_fails = n_fails + 1
+          call log_matrix(trngl%n_dev, trngl%n_dev, triangle_sim, &
+                          "Mack residuals bootstrap: bad draw in simulation phase."//achar(10)// &
+                          "Simulated triangle:"//achar(10)//"{}"//c_null_char, &
+                          SPDLOG_LEVEL_TRACE)
+          cycle main_loop
+        else
+          call pgb_incr(pgb, 1)
+        end if
+
         reserve(n_sim * (i_boot - 1) + i_sim) = sum(triangle_sim(:, trngl%n_dev)) - sum(get_latest(triangle_sim))
       end do
 
       i_boot = i_boot + 1
-      if (show_progress) call pgb_incr(pgb, n_sim)
+      call log_int(i_boot, "Finished simulation iteration {}"//c_null_char, SPDLOG_LEVEL_DEBUG)
     end do main_loop
+
+    status = merge(FAILURE, SUCCESS, n_fails == max_fails)
   end function mack_resid_boot
 
   !> @brief Perform a Mack pairs bootstrap on @p trngl
   !! @param[in, out] trngl Cumulative claims triangle.
   !! @param[in] n_boot Number of bootstrap simulations.
   !! @return reserve An array of bootstrapped reserve estimates.
-  function mack_pairs_boot(trngl, n_boot, n_sim, pgb) result(reserve)
+  function mack_pairs_boot(trngl, n_boot, n_sim, pgb, status) result(reserve)
     integer, intent(in) :: n_boot, n_sim
     type(t_mack_triangle), intent(inout) :: trngl
     type(c_ptr), intent(in), value :: pgb
 
     real(c_double) :: reserve(n_boot * n_sim)
-    integer :: i, j, k, i_diag, i_boot, i_sim, n_rows, n_obs
+    integer :: i, j, k, i_diag, i_boot, i_sim, n_rows, n_obs, n_fails, max_fails
     real(c_double) :: mean, sd
     real(c_double) :: triangle_sim(trngl%n_dev, trngl%n_dev)
     integer :: status
 
     integer, allocatable :: pair_idxs(:), resampled_pair_idxs(:)
     real(c_double), allocatable :: resampled_pairs(:, :)
-    logical :: show_progress
 
-    show_progress = c_associated(pgb)
+    n_fails = 0
+    max_fails = 1e6
 
     i_boot = 1
-    main_loop: do while (i_boot <= n_boot)
+    main_loop: do while (i_boot <= n_boot .and. n_fails < max_fails)
       do j = 1, trngl%n_dev - 1
         n_rows = trngl%n_dev - j
         n_obs = count(trngl%obs_mask(:, j + 1))
@@ -307,17 +351,24 @@ contains
           end do
         end do
 
-        if (status == FAILURE) cycle main_loop
+        if (status == FAILURE) then
+          n_fails = n_fails + 1
+          cycle main_loop
+        else
+          call pgb_incr(pgb, 1)
+        end if
+
         reserve(n_sim * (i_boot - 1) + i_sim) = sum(triangle_sim(:, trngl%n_dev)) - sum(get_latest(triangle_sim))
       end do
 
       i_boot = i_boot + 1
-      if (show_progress) call pgb_incr(pgb, n_sim)
     end do main_loop
+
+    status = merge(FAILURE, SUCCESS, n_fails == max_fails)
   end function mack_pairs_boot
 
-  subroutine mack_param_boot_cpp(n_dev, triangle, n_boot, n_sim, cond, dist, mask, reserve, &
-                                 pgb) bind(c)
+  function mack_param_boot_cpp(n_dev, triangle, n_boot, n_sim, cond, dist, mask, reserve, &
+                               pgb) result(status) bind(c)
     integer(c_int), intent(in), value :: n_dev
     real(c_double), intent(in) :: triangle(n_dev, n_dev)
     integer(c_int), intent(in), value :: n_boot, n_sim
@@ -327,15 +378,15 @@ contains
     real(c_double), intent(out) :: reserve(n_boot * n_sim)
     type(c_ptr), intent(in), value :: pgb
 
-    integer :: status
+    integer(c_int) :: status
     type(t_mack_triangle) :: trngl
 
     call trngl%init(triangle, logical(mask))
     reserve = mack_param_boot(trngl, n_boot, n_sim, logical(cond), dist, pgb, status)
-  end subroutine mack_param_boot_cpp
+  end function mack_param_boot_cpp
 
-  subroutine mack_resid_boot_cpp(n_dev, triangle, n_boot, n_sim, cond, resid_type, mask, reserve, &
-                                 pgb) bind(c)
+  function mack_resid_boot_cpp(n_dev, triangle, n_boot, n_sim, cond, resid_type, mask, reserve, &
+                               pgb) result(status) bind(c)
     integer(c_int), intent(in), value :: n_dev
     real(c_double), intent(in) :: triangle(n_dev, n_dev)
     integer(c_int), intent(in), value :: n_boot, n_sim
@@ -345,14 +396,18 @@ contains
     real(c_double), intent(out) :: reserve(n_boot * n_sim)
     type(c_ptr), intent(in), value :: pgb
 
-    integer :: status
+    integer(c_int) :: status
     type(t_mack_triangle) :: trngl
 
     call trngl%init(triangle, logical(mask))
-    reserve = mack_resid_boot(trngl, n_boot, n_sim, logical(cond), resid_type, pgb, status)
-  end subroutine mack_resid_boot_cpp
 
-  subroutine mack_pairs_boot_cpp(n_dev, triangle, n_boot, n_sim, mask, reserve, pgb) bind(c)
+    call log_matrix(trngl%n_dev, trngl%n_dev, merge(1.0_c_double, 0.0_c_double, mask), &
+                    "Starting Mack residuals simulation with mask"//achar(10)//"{}"//c_null_char, SPDLOG_LEVEL_TRACE)
+
+    reserve = mack_resid_boot(trngl, n_boot, n_sim, logical(cond), resid_type, pgb, status)
+  end function mack_resid_boot_cpp
+
+  function mack_pairs_boot_cpp(n_dev, triangle, n_boot, n_sim, mask, reserve, pgb) result(status) bind(c)
     integer(c_int), intent(in), value :: n_dev
     real(c_double), intent(in) :: triangle(n_dev, n_dev)
     integer(c_int), intent(in), value :: n_boot, n_sim
@@ -360,10 +415,12 @@ contains
     real(c_double), intent(out) :: reserve(n_boot * n_sim)
     type(c_ptr), intent(in), value :: pgb
 
+    integer(c_int) :: status
+
     type(t_mack_triangle) :: trngl
 
     call trngl%init(triangle, logical(mask))
     call trngl%fit_cl(use_mask=.false.)
-    reserve = mack_pairs_boot(trngl, n_boot, n_sim, pgb)
-  end subroutine mack_pairs_boot_cpp
+    reserve = mack_pairs_boot(trngl, n_boot, n_sim, pgb, status)
+  end function mack_pairs_boot_cpp
 end module mod_mack

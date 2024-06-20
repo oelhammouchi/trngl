@@ -23,14 +23,14 @@ contains
     real(c_double) :: triangle_boot(trngl%n_dev, trngl%n_dev)
 
     real(c_double) :: lambda, mean, sd, shape, scale
-    integer(c_int) :: i, j, k, i_boot, i_sim
-    logical :: show_progress
+    integer(c_int) :: i, j, k, i_boot, i_sim, n_fails, max_fails
 
-    show_progress = c_associated(pgb)
+    max_fails = 1e6
+    n_fails = 0
     call trngl%fit_glm(use_mask=.true., status=status)
 
     i_boot = 1
-    main_loop: do while (i_boot <= n_boot)
+    main_loop: do while (i_boot <= n_boot .and. n_fails < max_fails)
       status = SUCCESS
       triangle_boot = 0
       do i = 1, trngl%n_dev
@@ -56,7 +56,10 @@ contains
       end do
 
       call trngl%fit_glm_boot(triangle_boot, use_mask=.false., status=status)
-      if (status == FAILURE) cycle main_loop
+      if (status == FAILURE) then
+        n_fails = n_fails + 1
+        cycle main_loop
+      end if
 
       X_pred = 0.0
       X_pred(:, 1) = 1.0
@@ -95,11 +98,13 @@ contains
         end do
 
         reserve(n_sim * (i_boot - 1) + i_sim) = sum(y_sim)
+        call pgb_incr(pgb, 1)
       end do
 
       i_boot = i_boot + 1
-      if (show_progress) call pgb_incr(pgb, n_sim)
     end do main_loop
+
+    status = merge(FAILURE, SUCCESS, n_fails == max_fails)
   end function odp_param_boot
 
   function odp_resid_boot(trngl, n_boot, n_sim, pgb, status) result(reserve)
@@ -118,9 +123,7 @@ contains
 
     real(c_double), allocatable :: flat_resids(:)
 
-    integer(c_int) :: i, j, k, i_boot, i_sim
-
-    logical :: show_progress
+    integer(c_int) :: i, j, k, i_boot, i_sim, n_fails, max_fails
 
     allocate (X_pred(trngl%n_pred, trngl%n_cov))
     allocate (y_pred(trngl%n_pred))
@@ -129,7 +132,8 @@ contains
     allocate (resids_boot(trngl%n_dev, trngl%n_dev))
     allocate (triangle_pred(trngl%n_dev, trngl%n_dev))
 
-    show_progress = c_associated(pgb)
+    max_fails = 1e6
+    n_fails = 0
 
     n_pts = count(trngl%mask)
     allocate (flat_resids(n_pts), source=0._c_double)
@@ -137,7 +141,7 @@ contains
     flat_resids = pack(trngl%resids, trngl%mask)
 
     i_boot = 1
-    main_loop: do while (i_boot <= n_boot)
+    main_loop: do while (i_boot <= n_boot .and. n_fails <= max_fails)
       status = SUCCESS
       triangle_boot = 0
       resids_boot = 0
@@ -150,7 +154,10 @@ contains
       end do
 
       call trngl%fit_glm_boot(triangle_boot, use_mask=.false., status=status)
-      if (status == FAILURE) cycle main_loop
+      if (status == FAILURE) then
+        n_fails = n_fails + 1
+        cycle main_loop
+      end if
 
       X_pred = 0.0
       X_pred(:, 1) = 1.0
@@ -184,14 +191,16 @@ contains
         end do
 
         reserve(n_sim * (i_boot - 1) + i_sim) = real(sum(triangle_pred), kind=c_double)
+        call pgb_incr(pgb, 1)
       end do
 
       i_boot = i_boot + 1
-      if (show_progress) call pgb_incr(pgb, n_sim)
     end do main_loop
+
+    status = merge(FAILURE, SUCCESS, n_fails == max_fails)
   end function odp_resid_boot
 
-  subroutine odp_param_boot_cpp(n_dev, triangle, n_boot, n_sim, dist, mask, reserve, pgb) bind(c, name="odp_param_boot")
+ function odp_param_boot_cpp(n_dev, triangle, n_boot, n_sim, dist, mask, reserve, pgb) result(status) bind(c, name="odp_param_boot")
     integer(c_int), intent(in), value :: n_boot, n_sim, n_dev
     logical(c_bool), intent(in) :: mask(n_dev, n_dev)
     real(c_double), intent(in) :: triangle(n_dev, n_dev)
@@ -199,25 +208,25 @@ contains
     real(c_double), intent(out) :: reserve(n_boot * n_sim)
     type(c_ptr), intent(in), value :: pgb
 
-    integer :: status
+    integer(c_int) :: status
     type(t_odp_triangle) :: trngl
 
     call trngl%init(triangle, logical(mask))
     reserve = odp_param_boot(trngl, n_boot, n_sim, dist, pgb, status)
-  end subroutine odp_param_boot_cpp
+  end function odp_param_boot_cpp
 
-  subroutine odp_resid_boot_cpp(n_dev, triangle, n_boot, n_sim, mask, reserve, pgb) bind(c, name="odp_resid_boot")
+  function odp_resid_boot_cpp(n_dev, triangle, n_boot, n_sim, mask, reserve, pgb) result(status) bind(c, name="odp_resid_boot")
     integer(c_int), intent(in), value :: n_boot, n_sim, n_dev
     logical(c_bool), intent(in) :: mask(n_dev, n_dev)
     real(c_double), intent(in) :: triangle(n_dev, n_dev)
     real(c_double), intent(out) :: reserve(n_boot * n_sim)
     type(c_ptr), intent(in), value :: pgb
 
-    integer :: status
+    integer(c_int) :: status
     type(t_odp_triangle) :: trngl
 
     call trngl%init(triangle, logical(mask))
     reserve = odp_resid_boot(trngl, n_boot, n_sim, pgb, status)
-  end subroutine odp_resid_boot_cpp
+  end function odp_resid_boot_cpp
 
 end module mod_odp

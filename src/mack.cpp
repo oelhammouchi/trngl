@@ -1,4 +1,6 @@
 #include <RcppArmadillo.h>
+#include <RcppThread.h>
+#include <spdlog/fmt/fmt.h>
 
 #include <algorithm>
 #include <numeric>
@@ -13,14 +15,16 @@
 #include "mask.h"
 
 extern "C" {
-void mack_param_boot_cpp(int n_dev, double* triangle, int n_boot, int n_sim,
-                         bool cond, options::Dist dist, bool* mask,
-                         double* reserve, void* pgb);
-void mack_resid_boot_cpp(int n_dev, double* triangle, int n_boot, int n_sim,
-                         bool cond, options::ResidType resid_type, bool* mask,
-                         double* reserve, void* pgb);
-void mack_pairs_boot_cpp(int n_dev, double* triangle, int n_boot, int n_sim,
-                         bool* mask, double* reserve, void* pgb);
+options::Status mack_param_boot_cpp(int n_dev, double* triangle, int n_boot,
+                                    int n_sim, bool cond, options::Dist dist,
+                                    bool* mask, double* reserve, void* pgb);
+options::Status mack_resid_boot_cpp(int n_dev, double* triangle, int n_boot,
+                                    int n_sim, bool cond,
+                                    options::ResidType resid_type, bool* mask,
+                                    double* reserve, void* pgb);
+options::Status mack_pairs_boot_cpp(int n_dev, double* triangle, int n_boot,
+                                    int n_sim, bool* mask, double* reserve,
+                                    void* pgb);
 }
 
 // [[Rcpp::export(.mackParamBoot)]]
@@ -32,30 +36,17 @@ Rcpp::List mackParamBoot(Rcpp::NumericMatrix trngl, Rcpp::String dist,
     Mask mask(triangle.n_rows);
     arma::vec reserve(n_boot * n_sim);
 
-    Progress* pgb;
-    CliProgressBar* pb;
-    if (progress) {
-        pb = new CliProgressBar;
-        pgb = new Progress(n_boot * n_sim, true, *pb);
-    } else {
-        pb = nullptr;
-        pgb = nullptr;
-    }
+    CliProgressBar pb;
+    Progress pgb(n_boot * n_sim, progress, pb);
 
     mack_param_boot_cpp(triangle.n_rows, triangle.begin(), n_boot, n_sim, cond,
                         options::dist_mapping.at(dist), mask.begin(),
-                        reserve.begin(), pgb);
+                        reserve.begin(), &pgb);
 
     Rcpp::List res;
     res["reserve"] = reserve;
     res["nboot"] = n_boot;
     res.attr("class") = "boot.res";
-
-    if (progress) {
-        delete pgb;
-        delete pb;
-    }
-
     return res;
 };
 
@@ -68,29 +59,16 @@ Rcpp::List mackResidBoot(Rcpp::NumericMatrix trngl, Rcpp::String resid_type,
     arma::vec reserve(n_boot * n_sim);
     Mask mask = Mask(triangle.n_rows);
 
-    CliProgressBar* pb;
-    Progress* pgb;
-    if (progress) {
-        pb = new CliProgressBar;
-        pgb = new Progress(n_boot * n_sim, true, *pb);
-    } else {
-        pb = nullptr;
-        pgb = nullptr;
-    }
+    CliProgressBar pb;
+    Progress pgb(n_boot * n_sim, progress, pb);
 
     mack_resid_boot_cpp(triangle.n_rows, triangle.begin(), n_boot, n_sim, cond,
                         options::resid_type_mapping.at(resid_type),
-                        mask.begin(), reserve.begin(), pgb);
+                        mask.begin(), reserve.begin(), &pgb);
     Rcpp::List res;
     res["reserve"] = reserve;
     res["nboot"] = n_boot;
     res.attr("class") = "boot.res";
-
-    if (progress) {
-        delete pgb;
-        delete pb;
-    }
-
     return res;
 };
 
@@ -102,28 +80,15 @@ Rcpp::List mackPairsBoot(Rcpp::NumericMatrix trngl, int n_boot = 1e3,
     arma::vec reserve(n_boot * n_sim);
     Mask mask(triangle.n_rows);
 
-    Progress* pgb;
-    CliProgressBar* pb;
-    if (progress) {
-        pb = new CliProgressBar;
-        pgb = new Progress(n_boot * n_sim, true, *pb);
-    } else {
-        pb = nullptr;
-        pgb = nullptr;
-    }
+    CliProgressBar pb;
+    Progress pgb(n_boot * n_sim, progress, pb);
 
     mack_pairs_boot_cpp(triangle.n_rows, triangle.begin(), n_boot, n_sim,
-                        mask.begin(), reserve.begin(), pgb);
+                        mask.begin(), reserve.begin(), &pgb);
     Rcpp::List res;
     res["reserve"] = reserve;
     res["nboot"] = n_boot;
     res.attr("class") = "boot.res";
-
-    if (progress) {
-        delete pgb;
-        delete pb;
-    }
-
     return res;
 };
 
@@ -137,42 +102,31 @@ Rcpp::List mackSim(arma::mat triangle, options::SimType sim_type, int n_boot,
 
     Mask mask(n_dev);
     arma::mat reserves;
+    options::Status status = options::kSuccess;
 
     Rcpp::List res;
     res["n_boot"] = n_boot;
     res["n_sim"] = n_sim;
     std::map<int, Rcpp::IntegerVector> col_mapping_;
 
-    Progress* pgb;
-    CliProgressBar* pb;
+    CliProgressBar pb;
     int n_threads = TrnglRng::get().n_threads();
-    switch (sim_type) {
-        case options::SINGLE: {
-            if (progress) {
-                pb = new CliProgressBar;
-                pgb = new Progress(n_pts * n_boot * n_sim, true, *pb);
-            } else {
-                pb = nullptr;
-                pgb = nullptr;
-            }
 
+    switch (sim_type) {
+        case options::kSingle: {
+            Progress pgb(n_pts * n_boot * n_sim, progress, pb);
             reserves = arma::mat(n_boot * n_sim, n_pts);
             int col_idx = 0;
 
             // clang-format off
             #pragma omp parallel for num_threads(n_threads) collapse(2) default(none) \
-                shared(reserves, col_idx, col_mapping_, pgb) \
+                shared(reserves, col_idx, col_mapping_, pgb, pb, status) \
                 firstprivate(boot_type, mask, triangle, n_boot, n_sim, n_dev) \
                 firstprivate(dist_type, resid_type, cond, progress)
             // clang-format on
             for (int i = 0; i < n_dev; i++) {
                 for (int j = 1; j < n_dev - i; j++) {
-                    bool abort_check;
-                    if (progress) {
-                        abort_check = !Progress::check_abort();
-                    } else {
-                        abort_check = true;
-                    }
+                    if (status == options::kFailure) continue;
 
                     int k;
                     // clang-format off
@@ -191,69 +145,61 @@ Rcpp::List mackSim(arma::mat triangle, options::SimType sim_type, int n_boot,
                             {k, Rcpp::IntegerVector{i + 1, j + 1}});
                     }
 
-                    if (abort_check) {
-                        Mask mask_in(n_dev);
+                    Mask mask_in(n_dev);
+                    mask_in = mask;
+                    mask_in(i, j) = false;
 
-                        mask_in = mask;
-                        mask_in(i, j) = false;
+                    if (boot_type == options::kPairs ||
+                        boot_type == options::kParam)
+                        mask_in(0, n_dev - 1) = true;
 
-                        if (boot_type == options::PAIRS ||
-                            boot_type == options::PARAM)
-                            mask_in(0, n_dev - 1) = true;
-                        switch (boot_type) {
-                            case options::PAIRS: {
-                                mack_pairs_boot_cpp(
-                                    n_dev, triangle.begin(), n_boot, n_sim,
-                                    mask_in.begin(), reserves.colptr(k), pgb);
-                                break;
-                            }
-                            case options::PARAM: {
-                                mack_param_boot_cpp(n_dev, triangle.begin(),
-                                                    n_boot, n_sim, cond,
-                                                    dist_type, mask_in.begin(),
-                                                    reserves.colptr(k), pgb);
-                                break;
-                            }
-                            case options::RESID: {
-                                mack_resid_boot_cpp(n_dev, triangle.begin(),
-                                                    n_boot, n_sim, cond,
-                                                    resid_type, mask_in.begin(),
-                                                    reserves.colptr(k), pgb);
-                                break;
-                            }
+                    options::Status status_;
+                    switch (boot_type) {
+                        case options::kPairs: {
+                            status_ = mack_pairs_boot_cpp(
+                                n_dev, triangle.begin(), n_boot, n_sim,
+                                mask_in.begin(), reserves.colptr(k), &pgb);
+                            break;
+                        }
+                        case options::kParam: {
+                            status_ = mack_param_boot_cpp(
+                                n_dev, triangle.begin(), n_boot, n_sim, cond,
+                                dist_type, mask_in.begin(), reserves.colptr(k),
+                                &pgb);
+                            break;
+                        }
+                        case options::kResid: {
+                            status_ = mack_resid_boot_cpp(
+                                n_dev, triangle.begin(), n_boot, n_sim, cond,
+                                resid_type, mask_in.begin(), reserves.colptr(k),
+                                &pgb);
+                            break;
                         }
                     }
+
+                        // clang-format off
+                        #pragma omp critical
+                    // clang-format on
+                    { status = status_; }
                 }
             }
             res.attr("class") = Rcpp::CharacterVector{"single", "mack"};
             break;
         }
-        case options::CALENDAR: {
-            if (progress) {
-                pb = new CliProgressBar;
-                pgb = new Progress(n_dev * n_boot * n_sim, true, *pb);
-            } else {
-                pb = nullptr;
-                pgb = nullptr;
-            }
-
+        case options::kCalendar: {
+            Progress pgb(n_dev * n_boot * n_sim, progress, pb);
             reserves = arma::mat(n_boot * n_sim, n_dev);
 
             // clang-format off
             #pragma omp parallel for num_threads(n_threads) default(none) \
-                 shared(reserves, pgb, col_mapping_) \
+                shared(reserves, pgb, pb, col_mapping_, status) \
                 firstprivate(boot_type, mask, triangle, n_boot, n_sim, n_dev) \
                 firstprivate(dist_type, resid_type, cond, progress)
             // clang-format on
             for (int i_diag = 0; i_diag < n_dev; i_diag++) {
-                bool abort_check;
-                if (progress) {
-                    abort_check = !Progress::check_abort();
-                } else {
-                    abort_check = true;
-                }
+                if (status == options::kFailure) continue;
 
-                // clang-format off
+                    // clang-format off
                 #pragma omp critical
                 // clang-format on
                 {
@@ -261,113 +207,114 @@ Rcpp::List mackSim(arma::mat triangle, options::SimType sim_type, int n_boot,
                         {i_diag, Rcpp::IntegerVector{i_diag + 1}});
                 }
 
-                if (abort_check) {
-                    Mask mask_in = mask;
-                    for (int j = 1; j < n_dev; j++) {
-                        int i = n_dev - i_diag - j - 1;
-                        if (i < 0) continue;
-                        mask_in(i, j) = false;
+                Mask mask_in = mask;
+                for (int j = 1; j < n_dev; j++) {
+                    int i = n_dev - i_diag - j - 1;
+                    if (i < 0) continue;
+                    mask_in(i, j) = false;
+                }
+
+                if (boot_type == options::kPairs ||
+                    boot_type == options::kParam)
+                    mask_in(0, n_dev - 1) = true;
+
+                options::Status status_;
+                switch (boot_type) {
+                    case options::kPairs: {
+                        status_ = mack_pairs_boot_cpp(
+                            n_dev, triangle.begin(), n_boot, n_sim,
+                            mask_in.begin(), reserves.colptr(i_diag), &pgb);
+                        break;
+                    }
+                    case options::kParam: {
+                        status_ = mack_param_boot_cpp(
+                            n_dev, triangle.begin(), n_boot, n_sim, cond,
+                            dist_type, mask_in.begin(), reserves.colptr(i_diag),
+                            &pgb);
+                        break;
+                    }
+                    case options::kResid: {
+                        status_ = mack_resid_boot_cpp(
+                            n_dev, triangle.begin(), n_boot, n_sim, cond,
+                            resid_type, mask_in.begin(),
+                            reserves.colptr(i_diag), &pgb);
+                        break;
                     }
 
-                    if (boot_type == options::PAIRS ||
-                        boot_type == options::PARAM)
-                        mask_in(0, n_dev - 1) = true;
-                    switch (boot_type) {
-                        case options::PAIRS: {
-                            mack_pairs_boot_cpp(n_dev, triangle.begin(), n_boot,
-                                                n_sim, mask_in.begin(),
-                                                reserves.colptr(i_diag), pgb);
-                            break;
-                        }
-                        case options::PARAM: {
-                            mack_param_boot_cpp(n_dev, triangle.begin(), n_boot,
-                                                n_sim, cond, dist_type,
-                                                mask_in.begin(),
-                                                reserves.colptr(i_diag), pgb);
-                            break;
-                        }
-                        case options::RESID: {
-                            mack_resid_boot_cpp(n_dev, triangle.begin(), n_boot,
-                                                n_sim, cond, resid_type,
-                                                mask_in.begin(),
-                                                reserves.colptr(i_diag), pgb);
-                            break;
-                        }
-                    }
+                    // clang-format off
+                    #pragma omp critical
+                        // clang-format on
+                        { status = status_; }
                 }
             }
             res.attr("class") = Rcpp::CharacterVector{"calendar", "mack"};
             break;
         }
-        case options::ORIGIN: {
-            if (progress) {
-                pb = new CliProgressBar;
-                pgb = new Progress((n_dev - 1) * n_boot * n_sim, true, *pb);
-            } else {
-                pb = nullptr;
-                pgb = nullptr;
-            }
-
+        case options::kOrigin: {
+            Progress pgb((n_dev - 1) * n_boot * n_sim, progress, pb);
             reserves = arma::mat(n_boot * n_sim, n_dev - 1);
             // clang-format off
             #pragma omp parallel for num_threads(n_threads) default(none) \
-                shared(reserves, pgb, col_mapping_) \
+                shared(reserves, pgb, pb, col_mapping_, status) \
                 firstprivate(boot_type, mask, triangle, n_boot, n_sim, n_dev) \
                 firstprivate(dist_type, resid_type, cond, progress)
             // clang-format on
             for (int i = 0; i < n_dev - 1; i++) {
-                bool abort_check;
-                if (progress) {
-                    abort_check = !Progress::check_abort();
-                } else {
-                    abort_check = true;
-                }
+                if (status == options::kFailure) continue;
 
-                // clang-format off
+                    // clang-format off
                 #pragma omp critical
                 // clang-format on
                 { col_mapping_.insert({i, Rcpp::IntegerVector{i + 1}}); }
 
-                if (abort_check) {
-                    Mask mask_in = mask;
-                    mask_in.row(i) = false;
-                    mask_in(i, 0) = true;
+                Mask mask_in = mask;
+                mask_in.row(i) = false;
+                mask_in(i, 0) = true;
 
-                    if (boot_type == options::PAIRS ||
-                        boot_type == options::PARAM)
-                        mask_in(0, n_dev - 1) = true;
-                    switch (boot_type) {
-                        case options::PAIRS: {
-                            mack_pairs_boot_cpp(n_dev, triangle.begin(), n_boot,
-                                                n_sim, mask_in.begin(),
-                                                reserves.colptr(i), pgb);
-                            break;
-                        }
-                        case options::PARAM: {
-                            mack_param_boot_cpp(n_dev, triangle.begin(), n_boot,
-                                                n_sim, cond, dist_type,
-                                                mask_in.begin(),
-                                                reserves.colptr(i), pgb);
-                            break;
-                        }
-                        case options::RESID: {
-                            mack_resid_boot_cpp(n_dev, triangle.begin(), n_boot,
-                                                n_sim, cond, resid_type,
-                                                mask_in.begin(),
-                                                reserves.colptr(i), pgb);
-                            break;
-                        }
+                if (boot_type == options::kPairs ||
+                    boot_type == options::kParam)
+                    mask_in(0, n_dev - 1) = true;
+
+                options::Status status_;
+                switch (boot_type) {
+                    case options::kPairs: {
+                        status_ = mack_pairs_boot_cpp(
+                            n_dev, triangle.begin(), n_boot, n_sim,
+                            mask_in.begin(), reserves.colptr(i), &pgb);
+                        break;
+                    }
+                    case options::kParam: {
+                        status_ = mack_param_boot_cpp(
+                            n_dev, triangle.begin(), n_boot, n_sim, cond,
+                            dist_type, mask_in.begin(), reserves.colptr(i),
+                            &pgb);
+                        break;
+                    }
+                    case options::kResid: {
+                        status_ = mack_resid_boot_cpp(
+                            n_dev, triangle.begin(), n_boot, n_sim, cond,
+                            resid_type, mask_in.begin(), reserves.colptr(i),
+                            &pgb);
+                        break;
                     }
                 }
+
+                    // clang-format off
+                    #pragma omp critical
+                // clang-format on
+                { status = status_; }
             }
             res.attr("class") = Rcpp::CharacterVector{"origin", "mack"};
             break;
         }
     }
 
-    if (progress) {
-        delete pgb;
-        delete pb;
+    if (status == options::kFailure) {
+        Rcpp::stop(
+            "Could not complete the simulation before reaching "
+            "the maximum number of failures. Most likely, "
+            "this means the input triangle is highly "
+            "pathological.");
     }
 
     // Assigning to list drops the 'class' attribute for some reason
@@ -380,6 +327,7 @@ Rcpp::List mackSim(arma::mat triangle, options::SimType sim_type, int n_boot,
         col_mapping[i] = col_mapping_.at(i);
     }
     res["col_mapping"] = col_mapping;
+    res["status"] = status == options::kFailure ? "failure" : "success";
     res.attr("class") = res_class;
 
     return res;
@@ -390,8 +338,8 @@ Rcpp::List mackPairsSim(Rcpp::NumericMatrix trngl, Rcpp::String sim_type,
                         int n_boot, int n_sim, bool progress) {
     arma::mat triangle = Rcpp::as<arma::mat>(trngl);
     return mackSim(triangle, options::sim_type_mapping.at(sim_type), n_boot,
-                   n_sim, progress, true, options::BootType::PAIRS,
-                   options::Dist::NORMAL, options::STANDARD);
+                   n_sim, progress, true, options::BootType::kPairs,
+                   options::Dist::kNormal, options::kStandard);
 }
 
 // [[Rcpp::export(.mackParamSim)]]
@@ -400,8 +348,8 @@ Rcpp::List mackParamSim(Rcpp::NumericMatrix trngl, Rcpp::String sim_type,
                         bool progress) {
     arma::mat triangle = Rcpp::as<arma::mat>(trngl);
     return mackSim(triangle, options::sim_type_mapping.at(sim_type), n_boot,
-                   n_sim, progress, cond, options::PARAM,
-                   options::dist_mapping.at(dist), options::STANDARD);
+                   n_sim, progress, cond, options::kParam,
+                   options::dist_mapping.at(dist), options::kStandard);
 }
 
 // [[Rcpp::export(.mackResidSim)]]
@@ -410,6 +358,6 @@ Rcpp::List mackResidSim(Rcpp::NumericMatrix trngl, Rcpp::String sim_type,
                         int n_sim, bool progress) {
     arma::mat triangle = Rcpp::as<arma::mat>(trngl);
     return mackSim(triangle, options::sim_type_mapping.at(sim_type), n_boot,
-                   n_sim, progress, cond, options::RESID, options::NORMAL,
+                   n_sim, progress, cond, options::kResid, options::kNormal,
                    options::resid_type_mapping.at(resid_type));
 }
