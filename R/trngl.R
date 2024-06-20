@@ -80,6 +80,7 @@ as.trngl.trngl <- function(triangle) {
 #' as.trngl(raw.triangle)
 #' @export
 as.trngl.matrix <- function(triangle) {
+  attr(triangle, "name") <- deparse(substitute(triangle))
   if (!(nrow(triangle) == ncol(triangle))) {
     cli::cli_abort(c(
       "{.var triangle} must square.",
@@ -101,21 +102,32 @@ as.trngl.matrix <- function(triangle) {
 
 #' @export
 format.trngl <- function(x, ...) {
-  out <- c()
-  for (i in seq_len(nrow(x))) {
-    row <- ""
-    for (j in seq_len(ncol(x) + 1 - i)) {
-      if (any(sapply(attr(x, "outliers"), function(point) {
-        all(c(i, j) == point)
-      }))) {
-        row <- paste(row, cli::col_red(as.character(x[i, j])), sep = "\u00a0")
-      } else {
-        row <- paste(row, x[i, j], sep = "\u00a0")
-      }
+  name <- attr(x, "name")
+  class(x) <- "character"
+
+  # highlight outliers
+  outlier_type <- attr(x, "outlier_type")
+  for (outlier in attr(x, "outliers")) {
+    if (outlier_type == "origin") {
+      x[outlier, !is.na(x[outlier, ])] <- cli::col_red(x[outlier, !is.na(x[outlier, ])])
+    } else if (outlier_type == "calendar") {
+      calendarPeriod(x) <- cli::col_red(calendarPeriod(x))
+    } else {
+      x[outlier[1], outlier[2]] <- cli::col_red(x[outlier[1], outlier[2]])
     }
-    out <- c(out, row)
   }
-  return(cli::boxx(out, width = nchar(out[1]) + 10, padding = c(0, 1, 0, 1)))
+
+  vec <- as.character(x)
+  vec <- ifelse(is.na(vec), "", vec)
+  out <- cli::ansi_columns(vec,
+    fill = "cols",
+    max_cols = ncol(x),
+    sep = " ",
+    align = "center",
+    width = floor(cli::console_width() / 1.2)
+  )
+
+  return(cli::boxx(out, header = name, padding = c(0, 1, 0, 1)))
 }
 
 #' @export

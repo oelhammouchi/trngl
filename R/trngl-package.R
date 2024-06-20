@@ -14,4 +14,5 @@
 #' @description Re-export of \link[ChainLadder]{UKMotor}
 #' @include trngl.R
 #' @export
-UKMotor <- as.trngl(ChainLadder::UKMotor)
+UKMotor <- ChainLadder::UKMotor
+UKMotor <- as.trngl(UKMotor)

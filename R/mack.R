@@ -5,7 +5,7 @@ format.mack <- function(x, ...) {
     cli::cli_ul()
     cli::cli_li("bootstrap iterations: {x$n_boot}")
     cli::cli_li("simulation iterations: {x$n_sim}")
-    cli::cli_li("status:")
+    cli::cli_li("status: {ifelse(x$status == 'failure', cli::col_red(x$status), cli::col_green(x$status))}")
   })
 }
 
@@ -137,6 +137,7 @@ mackPairsSim <- function(trngl, sim_type, n_boot = 1e3, n_sim = 10, progress = T
   k_max <- which.max(dist)
   outlier <- res$col_mapping[[k_max]]
   attr(trngl, "outliers") <- c(attr(trngl, "outliers"), list(outlier))
+  attr(trngl, "outlier_type") <- sim_type
 
   assign(trngl.name, trngl, parent.frame())
   return(res)
@@ -184,6 +185,7 @@ mackParamSim <- function(trngl, sim_type, cond, dist, n_boot = 1e3, n_sim = 10, 
   k_max <- which.max(dist)
   outlier <- res$col_mapping[[k_max]]
   attr(trngl, "outliers") <- c(attr(trngl, "outliers"), list(outlier))
+  attr(trngl, "outlier_type") <- sim_type
 
   assign(trngl.name, trngl, parent.frame())
   return(res)
@@ -231,6 +233,7 @@ mackResidSim <- function(trngl, sim_type, cond, resid_type, n_boot = 1e3, n_sim 
   k_max <- which.max(dist)
   outlier <- res$col_mapping[[k_max]]
   attr(trngl, "outliers") <- c(attr(trngl, "outliers"), list(outlier))
+  attr(trngl, "outlier_type") <- sim_type
 
   assign(trngl.name, trngl, parent.frame())
   return(res)
