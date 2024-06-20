@@ -1,0 +1,55 @@
+---
+title: "Outlier detection with trngl"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Outlier detection with trngl}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(trngl)
+```
+
+The {trngl} package offers tools for detecting pathological points in claims triangles by means of bootstrap simulations. By 'pathological', we mean points which do not satisfy the assumptions of a some stochastic reserving model. At present, two such models are supported: Mack's distribution-free chain ladder and the ODP model.
+
+# Single point
+
+```{r}
+triangle <- cum2incr(UKMotor)
+triangle[1, 4] <- 1.5 * triangle[1, 4]
+triangle <- incr2cum(triangle)
+res <- odpParamSim(triangle, "single",
+  dist = "gamma",
+  n_boot = 1e3,
+  n_sim = 1e2,
+  progress = FALSE
+)
+plot(res)
+```
+
+
+# Calendar year
+
+```{r}
+triangle <- cum2incr(UKMotor)
+calendarPeriod(triangle) <- calendarPeriod(triangle) * 1.3
+triangle <- incr2cum(triangle)
+res <- mackResidSim(triangle, "calendar",
+  cond = FALSE,
+  resid_type = "studentised",
+  n_boot = 1e3,
+  n_sim = 1e2,
+  progress = TRUE
+)
+plot(res)
+```
+
+# Origin year
